@@ -10,7 +10,7 @@ export default function HomePage({
   currentDate, changeMonth, totalWalletBalance, wallets, budgets,
   hideBalance, setHideBalance, monthlyIncome, monthlyExpense, monthlyNetFlow,
   currentMonthMainTxs, groupedTxs, categories, setActiveTab,
-  onOpenNewWallet, onSelectBudget
+  onOpenNewWallet, onSelectBudget, onOpenTxDetail
 }) {
   const [showBulananInfo, setShowBulananInfo] = useState(false);
 
@@ -174,8 +174,8 @@ export default function HomePage({
                 {group.items.map((tx) => (
                   <div
                     key={tx.id}
-                    onClick={() => tx.budgetId && onSelectBudget(tx.budgetId)}
-                    className={`flex items-center justify-between p-3.5 transition-colors ${tx.budgetId ? 'cursor-pointer hover:bg-blue-50/40' : ''}`}
+                    onClick={() => onOpenTxDetail(tx)}
+                    className="flex items-center justify-between p-3.5 transition-colors cursor-pointer hover:bg-slate-50/60 active:bg-slate-100/80"
                   >
                     <div className="flex items-center gap-3 min-w-0 pr-3">
                       <CategoryBadge categoryName={tx.category} txType={tx.type} categories={categories} />
@@ -191,9 +191,14 @@ export default function HomePage({
                         </div>
                       </div>
                     </div>
-                    <p className={`font-extrabold text-sm shrink-0 ${tx.type === 'expense' ? 'text-rose-600' : 'text-[#00C49A]'}`}>
-                      {tx.type === 'expense' ? '-' : '+'}Rp{formatIDR(tx.amount)}
-                    </p>
+                    <div className="flex items-center gap-1.5 shrink-0">
+                      <p className={`font-extrabold text-sm ${tx.type === 'expense' ? 'text-rose-600' : 'text-[#00C49A]'}`}>
+                        {tx.type === 'expense' ? '-' : '+'}Rp{formatIDR(tx.amount)}
+                      </p>
+                      <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#CBD5E1" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                        <polyline points="9 18 15 12 9 6"/>
+                      </svg>
+                    </div>
                   </div>
                 ))}
               </div>

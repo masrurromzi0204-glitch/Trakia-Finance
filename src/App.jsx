@@ -261,6 +261,110 @@ export default function App() {
     setCurrentDate(next);
   };
 
+  // TX Detail Modal State
+  const [selectedTx, setSelectedTx] = useState(null);       // tx yang diklik
+  const [isTxDetailOpen, setIsTxDetailOpen] = useState(false);
+  const [isEditingTx, setIsEditingTx] = useState(false);     // mode edit di detail modal
+  const [editTxForm, setEditTxForm] = useState({});
+
+  const openTxDetail = (tx) => {
+    setSelectedTx(tx);
+    setIsEditingTx(false);
+    setEditTxForm({
+      type: tx.type,
+      amount: formatIDR(tx.amount),
+      category: tx.category,
+      note: tx.note || '',
+      walletId: tx.walletId || '',
+      date: tx.date ? new Date(tx.date).toISOString().substring(0, 10) : todayStr,
+    });
+    setIsTxDetailOpen(true);
+  };
+
+  const handleDeleteTx = async (tx) => {
+    if (!tx) return;
+    // Kembalikan saldo dompet
+    const wallet = wallets.find(w => w.id === tx.walletId);
+    if (wallet) {
+      const revertedBalance = tx.type === 'expense'
+        ? wallet.balance + Number(tx.amount)
+        : wallet.balance - Number(tx.amount);
+      if (user.isLocal) {
+        setWallets(prev => prev.map(w => w.id === wallet.id ? { ...w, balance: revertedBalance } : w));
+      } else {
+        await updateDoc(doc(db, 'wallets', wallet.id), { balance: revertedBalance });
+      }
+    }
+    if (user.isLocal) {
+      setTransactions(prev => prev.filter(t => t.id !== tx.id));
+    } else {
+      await deleteDoc(doc(db, 'transactions', tx.id));
+    }
+    setIsTxDetailOpen(false);
+    setSelectedTx(null);
+    showToast('Transaksi dihapus.');
+  };
+
+  const handleUpdateTx = async (e) => {
+    e.preventDefault();
+    if (!selectedTx) return;
+    const newAmount = parseRawAmount(editTxForm.amount);
+    if (newAmount <= 0) return showToast('Masukkan nominal yang valid!', 'error');
+
+    const oldWallet = wallets.find(w => w.id === selectedTx.walletId);
+    const newWallet = wallets.find(w => w.id === editTxForm.walletId);
+    if (!newWallet) return showToast('Pilih dompet terlebih dahulu!', 'error');
+
+    // Hitung saldo: revert transaksi lama, terapkan transaksi baru
+    let walletUpdates = {};
+
+    // Revert saldo dompet lama
+    if (oldWallet) {
+      const revertOld = selectedTx.type === 'expense'
+        ? oldWallet.balance + Number(selectedTx.amount)
+        : oldWallet.balance - Number(selectedTx.amount);
+      walletUpdates[oldWallet.id] = revertOld;
+    }
+
+    // Terapkan transaksi baru
+    const baseBalance = walletUpdates[newWallet.id] !== undefined
+      ? walletUpdates[newWallet.id]
+      : newWallet.balance;
+    if (editTxForm.type === 'expense' && baseBalance < newAmount)
+      return showToast(`Saldo ${newWallet.name} tidak mencukupi!`, 'error');
+    walletUpdates[newWallet.id] = editTxForm.type === 'expense'
+      ? baseBalance - newAmount
+      : baseBalance + newAmount;
+
+    const newDate = new Date((editTxForm.date || todayStr) + 'T12:00:00').getTime();
+    const updatedFields = {
+      type: editTxForm.type,
+      amount: newAmount,
+      category: editTxForm.category,
+      note: editTxForm.note || editTxForm.category,
+      walletId: newWallet.id,
+      walletName: newWallet.name,
+      date: newDate,
+    };
+
+    if (user.isLocal) {
+      Object.entries(walletUpdates).forEach(([wId, bal]) => {
+        setWallets(prev => prev.map(w => w.id === wId ? { ...w, balance: bal } : w));
+      });
+      setTransactions(prev => prev.map(t => t.id === selectedTx.id ? { ...t, ...updatedFields } : t));
+    } else {
+      for (const [wId, bal] of Object.entries(walletUpdates)) {
+        await updateDoc(doc(db, 'wallets', wId), { balance: bal });
+      }
+      await updateDoc(doc(db, 'transactions', selectedTx.id), updatedFields);
+    }
+
+    setIsTxDetailOpen(false);
+    setSelectedTx(null);
+    setIsEditingTx(false);
+    showToast('Transaksi berhasil diperbarui!');
+  };
+
   // CRUD Handlers
   const handleAddTx = async (e) => {
     e.preventDefault();
@@ -602,6 +706,7 @@ export default function App() {
             onSelectBudget={(bId) => {
               if (budgets.some(b => b.id === bId)) setSelectedBudgetId(bId);
             }}
+            onOpenTxDetail={openTxDetail}
           />
         )}
 
@@ -697,6 +802,10 @@ export default function App() {
         isConfirmResetOpen={isConfirmResetOpen} setIsConfirmResetOpen={setIsConfirmResetOpen} isResetting={isResetting} handleClearAllData={handleClearAllData}
         successPopup={successPopup} setSuccessPopup={setSuccessPopup}
         wallets={wallets} categories={categories} todayStr={todayStr}
+        isTxDetailOpen={isTxDetailOpen} setIsTxDetailOpen={setIsTxDetailOpen}
+        selectedTx={selectedTx} isEditingTx={isEditingTx} setIsEditingTx={setIsEditingTx}
+        editTxForm={editTxForm} setEditTxForm={setEditTxForm}
+        handleUpdateTx={handleUpdateTx} handleDeleteTx={handleDeleteTx}
       />
     </div>
   );

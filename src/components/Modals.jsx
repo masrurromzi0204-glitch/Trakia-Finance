@@ -1,7 +1,7 @@
 import React from 'react';
 import { 
   X, Trash2, ArrowDownCircle, ArrowUpCircle, Wallet, 
-  CheckCircle2, ChevronRight 
+  CheckCircle2, ChevronRight, Pencil, AlertTriangle
 } from 'lucide-react';
 import { formatIDR, formatInputThousand, formatShortDate } from '../utils/formatters';
 import { ICON_OPTIONS, COLOR_OPTIONS, WALLET_PRESETS } from '../utils/constants';
@@ -17,12 +17,195 @@ export default function Modals({
   isAdjustModalOpen, setIsAdjustModalOpen, setActiveTab,
   isConfirmResetOpen, setIsConfirmResetOpen, isResetting, handleClearAllData,
   successPopup, setSuccessPopup,
-  wallets, categories, todayStr
+  wallets, categories, todayStr,
+  // TX Detail props
+  isTxDetailOpen, setIsTxDetailOpen, selectedTx, isEditingTx, setIsEditingTx,
+  editTxForm, setEditTxForm, handleUpdateTx, handleDeleteTx,
 }) {
   const isRealEdit = editingWallet && !editingWallet.isPreset && Boolean(editingWallet.id);
+  const [confirmDeleteTx, setConfirmDeleteTx] = React.useState(false);
 
   return (
     <>
+      {/* 0. MODAL DETAIL / EDIT TRANSAKSI */}
+      {isTxDetailOpen && selectedTx && (
+        <div className="absolute inset-0 bg-black/50 z-50 flex items-end justify-center animate-in fade-in">
+          <div className="bg-white w-full rounded-t-[30px] p-6 shadow-2xl max-h-[90vh] overflow-y-auto animate-in slide-in-from-bottom-10">
+            
+            {/* Header */}
+            <div className="flex justify-between items-center mb-5">
+              <h2 className="text-lg font-extrabold text-[#0F172A]">
+                {isEditingTx ? 'Edit Transaksi' : 'Detail Transaksi'}
+              </h2>
+              <button
+                onClick={() => { setIsTxDetailOpen(false); setConfirmDeleteTx(false); setIsEditingTx(false); }}
+                className="p-1.5 bg-slate-100 rounded-full text-slate-500"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            {/* MODE VIEW */}
+            {!isEditingTx && (
+              <div className="space-y-4">
+                {/* Nominal */}
+                <div className={`rounded-2xl p-4 text-white text-center ${selectedTx.type === 'expense' ? 'bg-gradient-to-br from-rose-500 to-rose-600' : 'bg-gradient-to-br from-emerald-400 to-teal-500'}`}>
+                  <p className="text-xs font-bold opacity-80 mb-1">
+                    {selectedTx.type === 'expense' ? 'PENGELUARAN' : 'PEMASUKAN'}
+                  </p>
+                  <p className="text-3xl font-extrabold">
+                    {selectedTx.type === 'expense' ? '-' : '+'}Rp {formatIDR(selectedTx.amount)}
+                  </p>
+                </div>
+
+                {/* Info Rows */}
+                <div className="bg-slate-50 rounded-2xl divide-y divide-slate-100">
+                  <div className="flex justify-between items-center px-4 py-3">
+                    <span className="text-xs font-bold text-slate-500">Kategori</span>
+                    <span className="text-xs font-extrabold text-[#0F172A]">{selectedTx.category}</span>
+                  </div>
+                  <div className="flex justify-between items-center px-4 py-3">
+                    <span className="text-xs font-bold text-slate-500">Dompet</span>
+                    <span className="text-xs font-extrabold text-[#0F172A]">{selectedTx.walletName || '-'}</span>
+                  </div>
+                  <div className="flex justify-between items-center px-4 py-3">
+                    <span className="text-xs font-bold text-slate-500">Tanggal</span>
+                    <span className="text-xs font-extrabold text-[#0F172A]">
+                      {selectedTx.date ? new Date(selectedTx.date).toLocaleDateString('id-ID', { weekday:'long', day:'numeric', month:'long', year:'numeric' }) : '-'}
+                    </span>
+                  </div>
+                  {selectedTx.note && (
+                    <div className="flex justify-between items-start px-4 py-3 gap-4">
+                      <span className="text-xs font-bold text-slate-500 shrink-0">Catatan</span>
+                      <span className="text-xs font-extrabold text-[#0F172A] text-right">{selectedTx.note}</span>
+                    </div>
+                  )}
+                </div>
+
+                {/* Konfirmasi Hapus */}
+                {confirmDeleteTx ? (
+                  <div className="bg-rose-50 border border-rose-200 rounded-2xl p-4 space-y-3">
+                    <div className="flex items-center gap-2 text-rose-600">
+                      <AlertTriangle size={16} />
+                      <p className="text-xs font-bold">Yakin hapus transaksi ini? Saldo dompet akan dikembalikan.</p>
+                    </div>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => setConfirmDeleteTx(false)}
+                        className="flex-1 py-2.5 bg-white border border-slate-200 text-slate-600 rounded-xl text-xs font-bold"
+                      >
+                        Batal
+                      </button>
+                      <button
+                        onClick={() => { handleDeleteTx(selectedTx); setConfirmDeleteTx(false); }}
+                        className="flex-1 py-2.5 bg-rose-500 text-white rounded-xl text-xs font-bold"
+                      >
+                        Ya, Hapus
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="flex gap-3 pt-1">
+                    <button
+                      onClick={() => setConfirmDeleteTx(true)}
+                      className="flex-1 py-3 bg-rose-50 hover:bg-rose-100 text-rose-500 rounded-2xl text-xs font-bold flex items-center justify-center gap-2 transition-colors"
+                    >
+                      <Trash2 size={15} /> Hapus
+                    </button>
+                    <button
+                      onClick={() => setIsEditingTx(true)}
+                      className="flex-1 py-3 bg-[#EFF6FF] hover:bg-blue-100 text-[#1D63DC] rounded-2xl text-xs font-bold flex items-center justify-center gap-2 transition-colors"
+                    >
+                      <Pencil size={15} /> Edit
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* MODE EDIT */}
+            {isEditingTx && (
+              <form onSubmit={handleUpdateTx} className="space-y-4">
+                {/* Switch tipe */}
+                <div className="flex bg-slate-100 rounded-2xl p-1">
+                  <button type="button"
+                    onClick={() => { const firstExp = categories.find(c => c.type === 'expense')?.name || ''; setEditTxForm({ ...editTxForm, type: 'expense', category: firstExp }); }}
+                    className={`flex-1 py-2.5 text-xs font-extrabold rounded-xl transition-all ${editTxForm.type === 'expense' ? 'bg-white text-rose-600 shadow-sm' : 'text-slate-500'}`}
+                  >PENGELUARAN</button>
+                  <button type="button"
+                    onClick={() => { const firstInc = categories.find(c => c.type === 'income')?.name || ''; setEditTxForm({ ...editTxForm, type: 'income', category: firstInc }); }}
+                    className={`flex-1 py-2.5 text-xs font-extrabold rounded-xl transition-all ${editTxForm.type === 'income' ? 'bg-white text-[#00C49A] shadow-sm' : 'text-slate-500'}`}
+                  >PEMASUKAN</button>
+                </div>
+
+                <div>
+                  <label className="text-xs font-bold text-slate-500">Nominal (Rp)</label>
+                  <input type="text" inputMode="numeric" required
+                    value={editTxForm.amount}
+                    onChange={e => setEditTxForm({ ...editTxForm, amount: formatInputThousand(e.target.value) })}
+                    className="w-full mt-1 p-3.5 bg-slate-50 border border-slate-200 rounded-2xl text-xl font-extrabold outline-none focus:border-[#1D63DC]"
+                    placeholder="0"
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-xs font-bold text-slate-500">Pilih Dompet</label>
+                    <select required value={editTxForm.walletId}
+                      onChange={e => setEditTxForm({ ...editTxForm, walletId: e.target.value })}
+                      className="w-full mt-1 p-3 bg-slate-50 border border-slate-200 rounded-2xl text-xs font-bold outline-none focus:border-[#1D63DC]"
+                    >
+                      <option value="">Pilih Dompet...</option>
+                      {wallets.map(w => (
+                        <option key={w.id} value={w.id}>{w.name} (Rp {formatIDR(w.balance)})</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="text-xs font-bold text-slate-500">Tanggal</label>
+                    <input type="date" required value={editTxForm.date}
+                      onChange={e => setEditTxForm({ ...editTxForm, date: e.target.value })}
+                      className="w-full mt-1 p-3 bg-slate-50 border border-slate-200 rounded-2xl text-xs font-bold outline-none focus:border-[#1D63DC]"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="text-xs font-bold text-slate-500">Kategori</label>
+                  <select required value={editTxForm.category}
+                    onChange={e => setEditTxForm({ ...editTxForm, category: e.target.value })}
+                    className="w-full mt-1 p-3 bg-slate-50 border border-slate-200 rounded-2xl text-xs font-bold outline-none focus:border-[#1D63DC]"
+                  >
+                    <option value="">Pilih Kategori...</option>
+                    {categories.filter(c => c.type === editTxForm.type).map(c => (
+                      <option key={c.id || c.name} value={c.name}>{c.name}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="text-xs font-bold text-slate-500">Catatan / Keterangan</label>
+                  <input type="text" value={editTxForm.note}
+                    onChange={e => setEditTxForm({ ...editTxForm, note: e.target.value })}
+                    className="w-full mt-1 p-3 bg-slate-50 border border-slate-200 rounded-2xl text-sm font-medium outline-none focus:border-[#1D63DC]"
+                    placeholder="Contoh: Makan siang, Uang bensin..."
+                  />
+                </div>
+
+                <div className="flex gap-3">
+                  <button type="button" onClick={() => setIsEditingTx(false)}
+                    className="flex-1 py-3.5 rounded-2xl text-slate-600 font-extrabold text-sm bg-slate-100 hover:bg-slate-200 transition-colors"
+                  >Batal</button>
+                  <button type="submit"
+                    className={`flex-1 py-3.5 rounded-2xl text-white font-extrabold text-sm shadow-md transition-transform active:scale-98 ${editTxForm.type === 'expense' ? 'bg-[#1D63DC]' : 'bg-[#00C49A]'}`}
+                  >Simpan Perubahan</button>
+                </div>
+              </form>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* 1. MODAL CATAT TRANSAKSI (HOME) */}
       {isTxModalOpen && (
         <div className="absolute inset-0 bg-black/50 z-50 flex items-end justify-center animate-in fade-in">
