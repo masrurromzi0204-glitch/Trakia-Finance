@@ -12,6 +12,7 @@ import Header from './components/Header';
 import BottomNav from './components/BottomNav';
 import Modals from './components/Modals';
 
+import LoginPage from './pages/LoginPage';
 import HomePage from './pages/HomePage';
 import WalletsPage from './pages/WalletsPage';
 import BudgetsPage from './pages/BudgetsPage';
@@ -19,6 +20,11 @@ import ReportsPage from './pages/ReportsPage';
 import SettingsPage from './pages/SettingsPage';
 
 export default function App() {
+  // Login state — cek localStorage agar tidak perlu login ulang setiap refresh
+  const [isLoggedIn, setIsLoggedIn] = useState(() => {
+    return localStorage.getItem('trakia_logged_in') === 'true';
+  });
+
   const [user, setUser] = useState(null);
   const [activeTab, setActiveTab] = useState('home');
   const [isLoading, setIsLoading] = useState(true);
@@ -549,6 +555,11 @@ export default function App() {
     );
   }
 
+  // Tampilkan Login Page jika belum login
+  if (!isLoggedIn) {
+    return <LoginPage onLoginSuccess={() => setIsLoggedIn(true)} />;
+  }
+
   return (
     <div className="max-w-md mx-auto h-screen flex flex-col bg-white relative font-sans text-[#0F172A] select-none overflow-hidden shadow-2xl border-x border-slate-100">
       {toast && (
@@ -647,6 +658,10 @@ export default function App() {
             categories={categories}
             onOpenCategoryModal={() => setIsCategoryModalOpen(true)}
             onOpenResetModal={() => setIsConfirmResetOpen(true)}
+            onLogout={() => {
+              localStorage.removeItem('trakia_logged_in');
+              setIsLoggedIn(false);
+            }}
           />
         )}
       </div>

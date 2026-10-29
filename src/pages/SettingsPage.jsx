@@ -1,9 +1,9 @@
 import React from 'react';
-import { Plus, Trash2 } from 'lucide-react';
+import { Plus, Trash2, LogOut } from 'lucide-react';
 import { TrakiaCalculatorIcon } from '../components/TrakiaLogo';
 import CategoryBadge from '../components/CategoryBadge';
 
-export default function SettingsPage({ categories, onOpenCategoryModal, onOpenResetModal }) {
+export default function SettingsPage({ categories, onOpenCategoryModal, onOpenResetModal, onLogout }) {
   return (
     <div className="px-5 pt-4 space-y-5">
       <div className="bg-white rounded-[26px] p-5 border border-slate-100 shadow-[0_6px_25px_rgba(0,0,0,0.03)] flex items-center gap-3.5">
@@ -61,6 +61,20 @@ export default function SettingsPage({ categories, onOpenCategoryModal, onOpenRe
           className="w-full py-3 bg-rose-50 hover:bg-rose-100 text-rose-600 rounded-2xl font-bold text-xs flex items-center justify-center gap-2 transition-colors"
         >
           <Trash2 size={16} /> Kosongkan Semua Data (Reset Bersih)
+        </button>
+      </div>
+
+      {/* Logout */}
+      <div className="bg-white rounded-[26px] p-5 border border-slate-100 shadow-[0_6px_25px_rgba(0,0,0,0.03)]">
+        <h3 className="font-extrabold text-[#0F172A] text-sm mb-1">Akun</h3>
+        <p className="text-xs text-slate-500 mb-3">
+          Login sebagai <span className="font-bold text-slate-700">akunmanajemenuang_oji</span>
+        </p>
+        <button
+          onClick={onLogout}
+          className="w-full py-3 bg-slate-50 hover:bg-slate-100 text-slate-600 rounded-2xl font-bold text-xs flex items-center justify-center gap-2 transition-colors"
+        >
+          <LogOut size={16} /> Keluar / Log Out
         </button>
       </div>
     </div>
