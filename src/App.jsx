@@ -67,11 +67,11 @@ export default function App() {
   // Form States
   const todayStr = new Date().toISOString().substring(0, 10);
   const [txForm, setTxForm] = useState({
-    type: 'expense', amount: '', category: 'Kebutuhan Pribadi · Jajan/Uang Saku', note: '', walletId: '', date: todayStr
+    type: 'expense', amount: '', category: '', note: '', walletId: '', date: todayStr
   });
   const [walletForm, setWalletForm] = useState({ name: '', balance: '', type: 'Bank' });
   const [budgetForm, setBudgetForm] = useState({
-    name: '', initialAmount: '', walletId: '', storageForm: 'Multi-Dompet', categoryName: 'Kebutuhan Dating', note: '', date: todayStr
+    name: '', initialAmount: '', walletId: '', storageForm: 'Multi-Dompet', categoryName: '', note: '', date: todayStr
   });
   const [budgetActionForm, setBudgetActionForm] = useState({
     amount: '', walletId: '', sourceMode: 'direct_wallet', note: '', date: todayStr
@@ -514,7 +514,7 @@ export default function App() {
 
     const chosenStorage = budgetForm.storageForm || (sourceWallet ? sourceWallet.name : 'Multi-Dompet');
     const newBudgetData = {
-      name: budgetForm.name.trim(), categoryName: budgetForm.categoryName || 'Kebutuhan Dating',
+      name: budgetForm.name.trim(), categoryName: budgetForm.categoryName || budgetForm.name.trim(),
       storageForm: chosenStorage, allocated: initialAmount, spent: 0, remaining: initialAmount, createdAt: Date.now()
     };
 
@@ -552,7 +552,7 @@ export default function App() {
     }
 
     setIsBudgetModalOpen(false);
-    setBudgetForm({ name: '', initialAmount: '', walletId: '', storageForm: 'Multi-Dompet', categoryName: 'Kebutuhan Dating', note: '', date: todayStr });
+    setBudgetForm({ name: '', initialAmount: '', walletId: '', storageForm: 'Multi-Dompet', categoryName: '', note: '', date: todayStr });
     triggerSuccessPopup({
       title: 'Grup Anggaran Dibuat!', subtitle: newBudgetData.name, amount: initialAmount, amountType: 'neutral',
       details: [
@@ -567,7 +567,7 @@ export default function App() {
     if (!updatedFields.name?.trim()) return showToast("Nama anggaran tidak boleh kosong!", "error");
     const cleanData = {
       name: updatedFields.name.trim(),
-      categoryName: updatedFields.categoryName || 'Kebutuhan Dating',
+      categoryName: updatedFields.categoryName || updatedFields.name.trim(),
       storageForm: updatedFields.storageForm || 'Multi-Dompet'
     };
     if (user.isLocal) {

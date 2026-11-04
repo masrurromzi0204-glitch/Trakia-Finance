@@ -34,36 +34,45 @@ export default function SettingsPage({ categories, onOpenCategoryModal, onEditCa
           </button>
         </div>
 
-        <div className="divide-y divide-slate-100 max-h-80 overflow-y-auto pr-1">
-          {categories.map((cat) => (
-            <div
-              key={cat.id || cat.name}
-              onClick={() => onEditCategory && onEditCategory(cat)}
-              className="py-2.5 px-2 -mx-2 rounded-2xl flex items-center justify-between cursor-pointer hover:bg-slate-50 transition-colors group"
-            >
-              <div className="flex items-center gap-3 min-w-0 pr-2">
-                <CategoryBadge categoryName={cat.name} txType={cat.type} categories={categories} />
-                <div className="min-w-0">
-                  <p className="text-sm font-bold text-[#0F172A] truncate">{cat.name}</p>
-                  <p className={`text-[10px] font-bold uppercase ${cat.type === 'expense' ? 'text-rose-500' : 'text-[#00C49A]'}`}>
-                    {cat.type === 'expense' ? 'Pengeluaran' : 'Pemasukan'}
-                  </p>
-                </div>
-              </div>
-              <button
-                type="button"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onEditCategory && onEditCategory(cat);
-                }}
-                className="p-2 rounded-xl bg-slate-50 group-hover:bg-blue-50 text-slate-400 group-hover:text-[#1D63DC] transition-colors shrink-0"
-                title="Edit Kategori"
+        {categories.length === 0 ? (
+          <div className="bg-slate-50/80 rounded-2xl p-6 text-center space-y-2 border border-slate-100">
+            <p className="text-xs font-bold text-slate-600">Belum ada kategori transaksi</p>
+            <p className="text-[11px] text-slate-400">
+              Klik tombol <strong>+ Kategori Baru</strong> di atas untuk membuat kategori pemasukan atau pengeluaran sesuai kebutuhanmu.
+            </p>
+          </div>
+        ) : (
+          <div className="divide-y divide-slate-100 max-h-80 overflow-y-auto pr-1">
+            {categories.map((cat) => (
+              <div
+                key={cat.id || cat.name}
+                onClick={() => onEditCategory && onEditCategory(cat)}
+                className="py-2.5 px-2 -mx-2 rounded-2xl flex items-center justify-between cursor-pointer hover:bg-slate-50 transition-colors group"
               >
-                <Pencil size={14} />
-              </button>
-            </div>
-          ))}
-        </div>
+                <div className="flex items-center gap-3 min-w-0 pr-2">
+                  <CategoryBadge categoryName={cat.name} txType={cat.type} categories={categories} />
+                  <div className="min-w-0">
+                    <p className="text-sm font-bold text-[#0F172A] truncate">{cat.name}</p>
+                    <p className={`text-[10px] font-bold uppercase ${cat.type === 'expense' ? 'text-rose-500' : 'text-[#00C49A]'}`}>
+                      {cat.type === 'expense' ? 'Pengeluaran' : 'Pemasukan'}
+                    </p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onEditCategory && onEditCategory(cat);
+                  }}
+                  className="p-2 rounded-xl bg-slate-50 group-hover:bg-blue-50 text-slate-400 group-hover:text-[#1D63DC] transition-colors shrink-0"
+                  title="Edit Kategori"
+                >
+                  <Pencil size={14} />
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
       <div className="bg-white rounded-[26px] p-5 space-y-3 border border-slate-100 shadow-[0_6px_25px_rgba(0,0,0,0.03)]">

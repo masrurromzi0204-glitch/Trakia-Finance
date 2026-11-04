@@ -1,13 +1,4 @@
-export const DEFAULT_CATEGORIES = [
-  { id: 'cat-1', name: 'Kebutuhan Dating', icon: 'Heart', color: 'purple', type: 'expense' },
-  { id: 'cat-2', name: 'Kebutuhan Pribadi · Jajan/Uang Saku', icon: 'Coffee', color: 'indigo', type: 'expense' },
-  { id: 'cat-3', name: 'Belanja Online', icon: 'ShoppingBag', color: 'blue', type: 'expense' },
-  { id: 'cat-4', name: 'Tagihan Rutin · Uang Makan', icon: 'CreditCard', color: 'rose', type: 'expense' },
-  { id: 'cat-5', name: 'Tagihan Rutin · Uang Bensin', icon: 'Car', color: 'rose', type: 'expense' },
-  { id: 'cat-6', name: 'Tagihan Rutin · Orang Tua', icon: 'Gift', color: 'rose', type: 'expense' },
-  { id: 'cat-7', name: 'Gaji & Pendapatan Utama', icon: 'Briefcase', color: 'emerald', type: 'income' },
-  { id: 'cat-8', name: 'Bonus / Sampingan', icon: 'Sparkles', color: 'teal', type: 'income' },
-];
+export const DEFAULT_CATEGORIES = [];
 
 export const ICON_OPTIONS = [
   { name: 'Heart', label: 'Hati / Dating' },

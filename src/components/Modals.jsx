@@ -451,12 +451,26 @@ export default function Modals({
               </div>
 
               <div>
-                <label className="text-xs font-bold text-slate-500">Kategori Tampilan di Beranda</label>
+                <div className="flex justify-between items-center">
+                  <label className="text-xs font-bold text-slate-500">Kategori Tampilan di Beranda</label>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (setEditingCategory) setEditingCategory(null);
+                      setCategoryForm({ name: '', type: 'expense', icon: 'Tag', color: 'indigo' });
+                      setIsCategoryModalOpen(true);
+                    }}
+                    className="text-xs font-bold text-[#1D63DC] hover:underline"
+                  >
+                    + Tambah Kategori
+                  </button>
+                </div>
                 <select
                   value={budgetForm.categoryName}
                   onChange={e => setBudgetForm({ ...budgetForm, categoryName: e.target.value })}
                   className="w-full mt-1 p-3 bg-slate-50 border border-slate-200 rounded-2xl text-xs font-bold outline-none focus:border-[#1D63DC]"
                 >
+                  <option value="">Sesuai Nama Anggaran</option>
                   {categories.filter(c => c.type === 'expense').map(c => (
                     <option key={c.id || c.name} value={c.name}>{c.name}</option>
                   ))}
