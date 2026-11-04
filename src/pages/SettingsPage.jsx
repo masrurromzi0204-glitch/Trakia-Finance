@@ -10,8 +10,8 @@ export default function SettingsPage({ categories, onOpenCategoryModal, onEditCa
         <TrakiaCalculatorIcon size={52} />
         <div>
           <h2
-            className="text-2xl font-black text-[#1D63DC] leading-none"
-            style={{ fontFamily: 'Georgia, Cambria, "Times New Roman", Times, serif' }}
+            className="text-2xl font-extrabold text-[#1D63DC] leading-none tracking-tight"
+            style={{ fontFamily: "'Poppins', 'Plus Jakarta Sans', sans-serif" }}
           >
             Trakia
           </h2>

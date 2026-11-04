@@ -1246,7 +1246,7 @@ export default function App() {
         <div className="flex flex-col items-center gap-3">
           <TrakiaCalculatorIcon size={58} />
           <div className="text-center">
-            <h1 className="text-2xl font-black tracking-tight text-[#1D63DC]" style={{ fontFamily: 'Georgia, Cambria, "Times New Roman", Times, serif' }}>
+            <h1 className="text-2xl font-extrabold tracking-tight text-[#1D63DC]" style={{ fontFamily: "'Poppins', 'Plus Jakarta Sans', sans-serif" }}>
               Trakia
             </h1>
             <p className="text-[11px] font-medium text-slate-500">Your Money Traking</p>

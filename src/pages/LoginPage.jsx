@@ -45,7 +45,7 @@ export default function LoginPage({ onLoginSuccess }) {
         alignItems: 'center',
         justifyContent: 'center',
         padding: '24px 20px',
-        fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif",
+        fontFamily: "'Poppins', 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif",
       }}
     >
       {/* Card Container */}

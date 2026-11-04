@@ -12,8 +12,8 @@ export default function Header({ activeTab, setActiveTab, hideBalance, setHideBa
         <TrakiaCalculatorIcon size={44} />
         <div className="flex flex-col justify-center">
           <span
-            className="text-[24px] font-black text-[#1D63DC] leading-none tracking-tight"
-            style={{ fontFamily: 'Georgia, Cambria, "Times New Roman", Times, serif' }}
+            className="text-[22px] font-extrabold text-[#1D63DC] leading-none tracking-tight"
+            style={{ fontFamily: "'Poppins', 'Plus Jakarta Sans', sans-serif" }}
           >
             Trakia
           </span>
