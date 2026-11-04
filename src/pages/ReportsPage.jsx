@@ -1,9 +1,10 @@
 import React, { useState, useMemo } from 'react';
+import { ChevronLeft } from 'lucide-react';
 import { formatIDR, formatCompactIDR, getMonthYearStr, formatShortDate } from '../utils/formatters';
 
 export default function ReportsPage({
   currentDate, hideBalance, dailyAverageExpense, monthlyExpense,
-  monthlyIncome, categorySummary, weeklySummary, currentMonthMainTxs
+  monthlyIncome, categorySummary, weeklySummary, currentMonthMainTxs, onBackHome
 }) {
   const [reportChartType, setReportChartType] = useState('expense');
   const [reportTableFilter, setReportTableFilter] = useState('all');
@@ -27,7 +28,18 @@ export default function ReportsPage({
   }, [currentMonthMainTxs, reportTableFilter]);
 
   return (
-    <div className="px-5 pt-4 space-y-5">
+    <div className="px-5 pt-4 space-y-5 trakia-page-anim">
+      {/* Header Kembali ke Beranda */}
+      <div className="flex items-center justify-between">
+        <button
+          onClick={onBackHome}
+          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-slate-100 hover:bg-blue-50 text-slate-700 hover:text-[#1D63DC] text-xs font-extrabold transition-colors"
+        >
+          <ChevronLeft size={15} /> Kembali ke Beranda
+        </button>
+        <span className="text-xs font-extrabold text-[#1D63DC]">{getMonthYearStr(currentDate)}</span>
+      </div>
+
       {/* 2 Kartu KPI Atas */}
       <div className="grid grid-cols-2 gap-3">
         <div className="bg-[#EFF6FF]/90 border border-blue-100/80 p-4 rounded-[22px]">

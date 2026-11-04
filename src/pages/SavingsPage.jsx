@@ -4,7 +4,7 @@ import { formatIDR } from '../utils/formatters';
 
 export default function SavingsPage({ savings = [], savingsLogs = [], totalSavingsBalance = 0, hideBalance, onSelectSaving, onOpenNewSaving }) {
   return (
-    <div className="px-5 pt-4 space-y-5 pb-4">
+    <div className="px-5 pt-4 space-y-5 pb-4 trakia-page-anim">
       <div className="flex items-center justify-between gap-3">
         <p className="text-xs text-slate-500 leading-relaxed flex-1">
           Sisihkan uang dari kantung dompetmu untuk tujuan tabungan. Saat menabung, saldo kantung sumber otomatis berkurang.

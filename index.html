@@ -14,6 +14,7 @@
         color: #0F172A !important;
         display: block !important;
         min-height: 100vh !important;
+        scroll-behavior: smooth;
       }
       #root {
         max-width: 100% !important;
@@ -21,6 +22,58 @@
         padding: 0 !important;
         text-align: left !important;
         width: 100% !important;
+      }
+
+      /* Smooth & Clean Scrollbar */
+      * {
+        scroll-behavior: smooth;
+        -webkit-overflow-scrolling: touch;
+      }
+      ::-webkit-scrollbar {
+        width: 5px;
+        height: 5px;
+      }
+      ::-webkit-scrollbar-track {
+        background: transparent;
+      }
+      ::-webkit-scrollbar-thumb {
+        background: rgba(148, 163, 184, 0.35);
+        border-radius: 9999px;
+      }
+      ::-webkit-scrollbar-thumb:hover {
+        background: rgba(100, 116, 139, 0.55);
+      }
+
+      /* Simple Clean Page & Scroll Reveal Animation */
+      @keyframes trakiaFadeUp {
+        0% {
+          opacity: 0;
+          transform: translateY(10px);
+        }
+        100% {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+      .trakia-page-anim > * {
+        animation: trakiaFadeUp 0.32s cubic-bezier(0.22, 1, 0.36, 1) both;
+      }
+      .trakia-page-anim > *:nth-child(1) { animation-delay: 0.02s; }
+      .trakia-page-anim > *:nth-child(2) { animation-delay: 0.06s; }
+      .trakia-page-anim > *:nth-child(3) { animation-delay: 0.10s; }
+      .trakia-page-anim > *:nth-child(4) { animation-delay: 0.14s; }
+      .trakia-page-anim > *:nth-child(5) { animation-delay: 0.18s; }
+      .trakia-page-anim > *:nth-child(6) { animation-delay: 0.22s; }
+      .trakia-page-anim > *:nth-child(7) { animation-delay: 0.26s; }
+
+      .trakia-card-hover {
+        transition: transform 0.22s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.22s ease, border-color 0.2s ease;
+      }
+      .trakia-card-hover:hover {
+        transform: translateY(-1.5px);
+      }
+      .trakia-card-hover:active {
+        transform: scale(0.985);
       }
     </style>
   </head>

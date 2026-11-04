@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import {
   ChevronLeft, ChevronRight, Wallet, Eye, EyeOff,
-  HelpCircle, PieChart, PiggyBank, TrendingUp, ArrowUpCircle, Plus
+  HelpCircle, PieChart, PiggyBank, BarChart3, TrendingUp, ArrowUpCircle, Plus
 } from 'lucide-react';
 import { formatIDR, getMonthYearStr } from '../utils/formatters';
 import CategoryBadge from '../components/CategoryBadge';
@@ -15,7 +15,7 @@ export default function HomePage({
   const [showBulananInfo, setShowBulananInfo] = useState(false);
 
   return (
-    <div className="px-5 pt-4 space-y-5">
+    <div className="px-5 pt-4 space-y-5 trakia-page-anim">
       {/* Pemilih Bulan */}
       <div className="flex items-center justify-between">
         <span className="text-xs font-bold text-slate-400">Ringkasan Cashflow & Kantong</span>
@@ -33,12 +33,12 @@ export default function HomePage({
       {/* Kartu Utama: Total Saldo Semua Wallet */}
       <div
         onClick={() => setActiveTab('wallets')}
-        className="relative overflow-hidden rounded-[26px] p-5 text-white shadow-[0_10px_25px_-5px_rgba(29,99,220,0.35)] bg-gradient-to-br from-[#00C49A] via-[#0EA5E9] to-[#1D63DC] cursor-pointer active:scale-[0.99] transition-all"
+        className="relative overflow-hidden rounded-[26px] p-5 text-white shadow-[0_10px_25px_-5px_rgba(29,99,220,0.35)] bg-gradient-to-br from-[#00C49A] via-[#0EA5E9] to-[#1D63DC] cursor-pointer trakia-card-hover"
       >
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2 text-white/90 text-xs font-semibold">
             <Wallet size={15} />
-            <span>Total Saldo Riil Semua Kantong</span>
+            <span>Total Saldo Real Semua Kantong</span>
           </div>
           <button
             type="button"
@@ -74,16 +74,16 @@ export default function HomePage({
       {showBulananInfo && (
         <div className="bg-[#0F172A] text-white text-xs p-3.5 rounded-2xl leading-relaxed shadow-md animate-in fade-in">
           <p className="font-bold text-[#00C49A] mb-1">Apa itu Selisih Bulanan?</p>
-          Hasil dari <strong>Pemasukan (Rp {formatIDR(monthlyIncome)}) dikurangi Pengeluaran (Rp {formatIDR(monthlyExpense)})</strong> pada bulan {getMonthYearStr(currentDate)}. Sedangkan Total Saldo di kartu biru adalah gabungan uang riil di semua kantong Anda.
+          Hasil dari <strong>Pemasukan (Rp {formatIDR(monthlyIncome)}) dikurangi Pengeluaran (Rp {formatIDR(monthlyExpense)})</strong> pada bulan {getMonthYearStr(currentDate)}. Sedangkan Total Saldo di kartu biru adalah gabungan uang real di semua kantong Anda.
         </div>
       )}
 
-      {/* Baris Real Saldo Tiap Kantong (Agar tahu saldo per kantong secara langsung) */}
+      {/* Baris Real Saldo Tiap Kantong */}
       {wallets.length > 0 && (
         <div className="space-y-2">
           <div className="flex items-center justify-between px-1">
-            <span className="text-xs font-extrabold text-[#0F172A]">Saldo Riil per Kantong</span>
-            <button onClick={() => setActiveTab('wallets')} className="text-[11px] font-bold text-[#1D63DC]">
+            <span className="text-xs font-extrabold text-[#0F172A]">Saldo Real per Kantong</span>
+            <button onClick={() => setActiveTab('wallets')} className="text-[11px] font-bold text-[#1D63DC] hover:underline">
               Lihat Tracking →
             </button>
           </div>
@@ -92,7 +92,7 @@ export default function HomePage({
               <div
                 key={w.id}
                 onClick={() => setActiveTab('wallets')}
-                className="min-w-[138px] bg-slate-50/90 hover:bg-blue-50/50 border border-slate-200/70 rounded-2xl p-3 cursor-pointer shrink-0 transition-all"
+                className="min-w-[138px] bg-slate-50/90 hover:bg-blue-50/50 border border-slate-200/70 rounded-2xl p-3 cursor-pointer shrink-0 trakia-card-hover"
               >
                 <div className="flex items-center justify-between gap-1">
                   <span className="text-[11px] font-extrabold text-slate-700 truncate">{w.name}</span>
@@ -109,44 +109,60 @@ export default function HomePage({
         </div>
       )}
 
-      {/* Pintasan Menu Grid (Dompet, Anggaran, Tabungan) */}
-      <div className="grid grid-cols-3 gap-2.5">
+      {/* Pintasan Menu Grid: Kantong, Anggaran, Tabungan + Card Analisis */}
+      <div className="grid grid-cols-2 gap-2.5">
         <button
           onClick={() => setActiveTab('wallets')}
-          className="flex flex-col items-start gap-2 p-3 rounded-[20px] bg-white border border-slate-100 shadow-[0_4px_15px_rgba(0,0,0,0.03)] hover:border-blue-200 text-left transition-all"
+          className="flex items-center gap-3 p-3.5 rounded-[22px] bg-white border border-slate-100 shadow-[0_4px_15px_rgba(0,0,0,0.03)] hover:border-blue-200 text-left trakia-card-hover"
         >
-          <div className="w-9 h-9 rounded-xl bg-[#EFF6FF] text-[#1D63DC] flex items-center justify-center shrink-0">
-            <Wallet size={18} />
+          <div className="w-10 h-10 rounded-2xl bg-[#EFF6FF] text-[#1D63DC] flex items-center justify-center shrink-0">
+            <Wallet size={19} />
           </div>
-          <div className="min-w-0 w-full">
+          <div className="min-w-0">
             <p className="font-extrabold text-xs text-[#0F172A]">Kantong</p>
-            <p className="text-[10px] text-slate-400 truncate">{wallets.length} Dompet</p>
+            <p className="text-[11px] text-slate-400 truncate">{wallets.length} Dompet Aktif</p>
           </div>
         </button>
 
         <button
           onClick={() => setActiveTab('budgets')}
-          className="flex flex-col items-start gap-2 p-3 rounded-[20px] bg-white border border-slate-100 shadow-[0_4px_15px_rgba(0,0,0,0.03)] hover:border-emerald-200 text-left transition-all"
+          className="flex items-center gap-3 p-3.5 rounded-[22px] bg-white border border-slate-100 shadow-[0_4px_15px_rgba(0,0,0,0.03)] hover:border-emerald-200 text-left trakia-card-hover"
         >
-          <div className="w-9 h-9 rounded-xl bg-[#E6FAF5] text-[#00C49A] flex items-center justify-center shrink-0">
-            <PieChart size={18} />
+          <div className="w-10 h-10 rounded-2xl bg-[#E6FAF5] text-[#00C49A] flex items-center justify-center shrink-0">
+            <PieChart size={19} />
           </div>
-          <div className="min-w-0 w-full">
+          <div className="min-w-0">
             <p className="font-extrabold text-xs text-[#0F172A]">Anggaran</p>
-            <p className="text-[10px] text-slate-400 truncate">{budgets.length} Grup Aktif</p>
+            <p className="text-[11px] text-slate-400 truncate">{budgets.length} Grup Aktif</p>
           </div>
         </button>
 
         <button
           onClick={() => setActiveTab('savings')}
-          className="flex flex-col items-start gap-2 p-3 rounded-[20px] bg-white border border-slate-100 shadow-[0_4px_15px_rgba(0,0,0,0.03)] hover:border-amber-200 text-left transition-all"
+          className="flex items-center gap-3 p-3.5 rounded-[22px] bg-white border border-slate-100 shadow-[0_4px_15px_rgba(0,0,0,0.03)] hover:border-amber-200 text-left trakia-card-hover"
         >
-          <div className="w-9 h-9 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center shrink-0">
-            <PiggyBank size={18} />
+          <div className="w-10 h-10 rounded-2xl bg-amber-50 text-amber-600 flex items-center justify-center shrink-0">
+            <PiggyBank size={19} />
           </div>
-          <div className="min-w-0 w-full">
+          <div className="min-w-0">
             <p className="font-extrabold text-xs text-[#0F172A]">Tabungan</p>
-            <p className="text-[10px] text-slate-400 truncate">{savings.length} Tujuan</p>
+            <p className="text-[11px] text-slate-400 truncate">{savings.length} Tujuan</p>
+          </div>
+        </button>
+
+        <button
+          onClick={() => setActiveTab('reports')}
+          className="flex items-center gap-3 p-3.5 rounded-[22px] bg-gradient-to-br from-[#EFF6FF] to-indigo-50/70 border border-blue-100 shadow-[0_4px_15px_rgba(29,99,220,0.06)] hover:border-[#1D63DC] text-left trakia-card-hover"
+        >
+          <div className="w-10 h-10 rounded-2xl bg-[#1D63DC] text-white flex items-center justify-center shrink-0 shadow-sm">
+            <BarChart3 size={19} />
+          </div>
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center justify-between">
+              <p className="font-extrabold text-xs text-[#1D63DC]">Analisis</p>
+              <ChevronRight size={14} className="text-[#1D63DC]" />
+            </div>
+            <p className="text-[11px] text-slate-500 truncate">Grafik & Rekap</p>
           </div>
         </button>
       </div>
@@ -220,7 +236,7 @@ export default function HomePage({
                   <div
                     key={tx.id}
                     onClick={() => onOpenTxDetail(tx)}
-                    className="flex items-center justify-between p-3.5 transition-colors cursor-pointer hover:bg-slate-50/60 active:bg-slate-100/80"
+                    className="flex items-center justify-between p-3.5 transition-all duration-150 cursor-pointer hover:bg-slate-50/70 active:scale-[0.99]"
                   >
                     <div className="flex items-center gap-3 min-w-0 pr-3">
                       <CategoryBadge categoryName={tx.category} txType={tx.type} categories={categories} />

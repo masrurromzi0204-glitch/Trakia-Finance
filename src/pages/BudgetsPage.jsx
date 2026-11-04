@@ -7,7 +7,7 @@ export default function BudgetsPage({ budgets, budgetLogs = [], categories, onSe
   const accentColors = ['text-[#1D63DC]', 'text-amber-500', 'text-[#00C49A]', 'text-purple-600', 'text-rose-500'];
 
   return (
-    <div className="px-5 pt-4 space-y-5">
+    <div className="px-5 pt-4 space-y-5 trakia-page-anim">
       <div className="flex items-start justify-between gap-3">
         <p className="text-xs text-slate-500 leading-relaxed flex-1">
           Kelola pos anggaran atau grup pengeluaran (bisa dari <strong>multiple kantong dompet</strong>). Ketuk kartu untuk melihat rincian per kantong, edit, atau catat keluar.

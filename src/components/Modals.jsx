@@ -13,7 +13,7 @@ export default function Modals({
   isBudgetModalOpen, setIsBudgetModalOpen, budgetForm, setBudgetForm, handleAddBudget,
   selectedBudget, setSelectedBudgetId, selectedBudgetLogs, handleUpdateBudget, handleUpdateBudgetLog, handleDeleteBudget, handleDeleteBudgetLog,
   isBudgetActionModalOpen, setIsBudgetActionModalOpen, budgetActionType, setBudgetActionType, budgetActionForm, setBudgetActionForm, handleBudgetAction,
-  isCategoryModalOpen, setIsCategoryModalOpen, categoryForm, setCategoryForm, handleAddCategory,
+  isCategoryModalOpen, setIsCategoryModalOpen, editingCategory, setEditingCategory, categoryForm, setCategoryForm, handleAddCategory, handleDeleteCategory,
   isAdjustModalOpen, setIsAdjustModalOpen, setActiveTab,
   isConfirmResetOpen, setIsConfirmResetOpen, isResetting, handleClearAllData,
   successPopup, setSuccessPopup,
@@ -388,7 +388,7 @@ export default function Modals({
               </div>
 
               <div>
-                <label className="text-xs font-bold text-slate-500">Saldo Riil Saat Ini (Rp)</label>
+                <label className="text-xs font-bold text-slate-500">Saldo Real Saat Ini (Rp)</label>
                 <input
                   type="text"
                   inputMode="numeric"
@@ -1645,13 +1645,21 @@ export default function Modals({
         </div>
       )}
 
-      {/* 6. MODAL TAMBAH KATEGORI BARU */}
+      {/* 6. MODAL TAMBAH / EDIT KATEGORI */}
       {isCategoryModalOpen && (
         <div className="absolute inset-0 bg-black/50 z-[70] flex items-center justify-center p-4 animate-in fade-in">
           <div className="bg-white w-full max-w-sm rounded-[28px] p-6 shadow-2xl">
             <div className="flex justify-between items-center mb-4">
-              <h2 className="text-lg font-extrabold text-[#0F172A]">Tambah Kategori Baru</h2>
-              <button onClick={() => setIsCategoryModalOpen(false)} className="p-1.5 bg-slate-100 rounded-full text-slate-500">
+              <h2 className="text-lg font-extrabold text-[#0F172A]">
+                {editingCategory ? 'Edit Kategori' : 'Tambah Kategori Baru'}
+              </h2>
+              <button
+                onClick={() => {
+                  setIsCategoryModalOpen(false);
+                  if (setEditingCategory) setEditingCategory(null);
+                }}
+                className="p-1.5 bg-slate-100 rounded-full text-slate-500"
+              >
                 <X size={18} />
               </button>
             </div>
@@ -1664,7 +1672,7 @@ export default function Modals({
                   required
                   value={categoryForm.name}
                   onChange={e => setCategoryForm({ ...categoryForm, name: e.target.value })}
-                  className="w-full mt-1 p-3 bg-slate-50 border border-slate-200 rounded-2xl text-sm font-bold outline-none"
+                  className="w-full mt-1 p-3 bg-slate-50 border border-slate-200 rounded-2xl text-sm font-bold outline-none focus:border-[#1D63DC]"
                   placeholder="Cth: Kebutuhan Skincare · Bulanan"
                 />
               </div>
@@ -1675,7 +1683,7 @@ export default function Modals({
                   <select
                     value={categoryForm.type}
                     onChange={e => setCategoryForm({ ...categoryForm, type: e.target.value })}
-                    className="w-full mt-1 p-3 bg-slate-50 border border-slate-200 rounded-2xl text-xs font-bold outline-none"
+                    className="w-full mt-1 p-3 bg-slate-50 border border-slate-200 rounded-2xl text-xs font-bold outline-none focus:border-[#1D63DC]"
                   >
                     <option value="expense">Pengeluaran</option>
                     <option value="income">Pemasukan</option>
@@ -1687,7 +1695,7 @@ export default function Modals({
                   <select
                     value={categoryForm.icon}
                     onChange={e => setCategoryForm({ ...categoryForm, icon: e.target.value })}
-                    className="w-full mt-1 p-3 bg-slate-50 border border-slate-200 rounded-2xl text-xs font-bold outline-none"
+                    className="w-full mt-1 p-3 bg-slate-50 border border-slate-200 rounded-2xl text-xs font-bold outline-none focus:border-[#1D63DC]"
                   >
                     {ICON_OPTIONS.map(ic => (
                       <option key={ic.name} value={ic.name}>{ic.label}</option>
@@ -1714,9 +1722,21 @@ export default function Modals({
                 </div>
               </div>
 
-              <button type="submit" className="w-full py-3.5 bg-[#1D63DC] text-white rounded-2xl font-extrabold text-sm">
-                Simpan Kategori
-              </button>
+              <div className="flex gap-2 pt-1">
+                {editingCategory && handleDeleteCategory && (
+                  <button
+                    type="button"
+                    onClick={() => handleDeleteCategory(editingCategory)}
+                    className="p-3.5 bg-rose-50 hover:bg-rose-100 text-rose-600 rounded-2xl font-bold transition-colors"
+                    title="Hapus Kategori"
+                  >
+                    <Trash2 size={18} />
+                  </button>
+                )}
+                <button type="submit" className="flex-1 py-3.5 bg-[#1D63DC] text-white rounded-2xl font-extrabold text-sm shadow-md shadow-blue-500/20">
+                  {editingCategory ? 'Simpan Perubahan' : 'Simpan Kategori'}
+                </button>
+              </div>
             </form>
           </div>
         </div>

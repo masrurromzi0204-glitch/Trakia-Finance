@@ -21,9 +21,9 @@ export default function WalletsPage({
   const customPresets = ['Gaji Magang', 'Freelance', ...WALLET_PRESETS.filter(p => p !== 'Gaji Magang' && p !== 'Freelance')];
 
   return (
-    <div className="px-5 pt-4 space-y-5">
+    <div className="px-5 pt-4 space-y-5 trakia-page-anim">
       <div className="flex items-center justify-between">
-        <p className="text-xs text-slate-500">Saldo riil & tracking pengeluaran tiap kantong ({wallets.length} kantong)</p>
+        <p className="text-xs text-slate-500">Saldo real & tracking pengeluaran tiap kantong ({wallets.length} kantong)</p>
         <button
           onClick={onAddWallet}
           className="px-3.5 py-2 bg-[#1D63DC] hover:bg-blue-700 text-white rounded-full text-xs font-bold flex items-center gap-1.5 shadow-sm shadow-blue-500/20"
@@ -34,7 +34,7 @@ export default function WalletsPage({
 
       {/* Kartu Total Keseluruhan Saldo Dompet */}
       <div className="bg-gradient-to-br from-[#00C49A] via-[#0EA5E9] to-[#1D63DC] text-white rounded-[26px] p-5 shadow-[0_10px_25px_-5px_rgba(29,99,220,0.3)]">
-        <p className="text-xs text-white/90 font-semibold uppercase tracking-wider">Total Saldo Riil Semua Kantong</p>
+        <p className="text-xs text-white/90 font-semibold uppercase tracking-wider">Total Saldo Real Semua Kantong</p>
         <h3 className="text-3xl font-extrabold mt-1">
           {hideBalance ? 'Rp •••••••' : `Rp ${formatIDR(totalWalletBalance)}`}
         </h3>
@@ -108,7 +108,7 @@ export default function WalletsPage({
 
                 <div className="flex items-center gap-2.5 shrink-0">
                   <div className="text-right">
-                    <span className="text-[10px] font-bold text-slate-400 block">Saldo Riil</span>
+                    <span className="text-[10px] font-bold text-slate-400 block">Saldo Real</span>
                     <p className="font-extrabold text-sm text-[#0F172A]">
                       {hideBalance ? 'Rp ••••••' : `Rp${formatIDR(w.balance)}`}
                     </p>

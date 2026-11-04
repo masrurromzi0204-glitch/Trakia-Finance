@@ -48,6 +48,7 @@ export default function App() {
   const [editingWallet, setEditingWallet] = useState(null);
   const [isBudgetModalOpen, setIsBudgetModalOpen] = useState(false);
   const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false);
+  const [editingCategory, setEditingCategory] = useState(null);
   const [selectedBudgetId, setSelectedBudgetId] = useState(null);
   const [isBudgetActionModalOpen, setIsBudgetActionModalOpen] = useState(false);
   const [budgetActionType, setBudgetActionType] = useState('expense');
@@ -227,7 +228,24 @@ export default function App() {
   }, [user]);
 
   // Derived Calculations
-  const categories = useMemo(() => [...DEFAULT_CATEGORIES, ...customCategories], [customCategories]);
+  const categories = useMemo(() => {
+    const deletedDefaults = new Set(
+      customCategories.filter(c => c.isDeleted && c.originalName).map(c => c.originalName)
+    );
+    const overriddenMap = {};
+    customCategories.forEach(c => {
+      if (c.originalName && !c.isDeleted) {
+        overriddenMap[c.originalName] = c;
+      }
+    });
+
+    const mergedDefaults = DEFAULT_CATEGORIES
+      .filter(d => !deletedDefaults.has(d.name))
+      .map(d => overriddenMap[d.name] ? { ...d, ...overriddenMap[d.name] } : d);
+
+    const pureCustoms = customCategories.filter(c => !c.originalName && !c.isDeleted);
+    return [...mergedDefaults, ...pureCustoms];
+  }, [customCategories]);
   const selectedBudget = useMemo(() => budgets.find(b => b.id === selectedBudgetId) || null, [budgets, selectedBudgetId]);
   const selectedBudgetLogs = useMemo(() => selectedBudgetId ? budgetLogs.filter(l => l.budgetId === selectedBudgetId) : [], [budgetLogs, selectedBudgetId]);
 
@@ -1109,7 +1127,54 @@ export default function App() {
     e.preventDefault();
     if (!categoryForm.name.trim()) return;
     const savedCatName = categoryForm.name.trim();
-    const newCat = { name: savedCatName, type: categoryForm.type, icon: categoryForm.icon || 'Tag', color: categoryForm.color || 'indigo' };
+    const newCat = {
+      name: savedCatName,
+      type: categoryForm.type,
+      icon: categoryForm.icon || 'Tag',
+      color: categoryForm.color || 'indigo'
+    };
+
+    if (editingCategory) {
+      const oldName = editingCategory.name;
+      const isCustomDoc = Boolean(editingCategory.id && !String(editingCategory.id).startsWith('def-'));
+
+      if (user.isLocal) {
+        if (isCustomDoc) {
+          setCustomCategories(prev => prev.map(c => c.id === editingCategory.id ? { ...c, ...newCat } : c));
+        } else {
+          const origName = editingCategory.originalName || editingCategory.name;
+          setCustomCategories(prev => [
+            ...prev.filter(c => c.originalName !== origName),
+            { id: 'cat-' + Date.now(), originalName: origName, ...newCat }
+          ]);
+        }
+        if (oldName !== savedCatName) {
+          setTransactions(prev => prev.map(t => t.category === oldName ? { ...t, category: savedCatName } : t));
+          setBudgets(prev => prev.map(b => b.categoryName === oldName ? { ...b, categoryName: savedCatName } : b));
+        }
+      } else {
+        if (isCustomDoc) {
+          await updateDoc(doc(db, 'categories', editingCategory.id), newCat);
+        } else {
+          const origName = editingCategory.originalName || editingCategory.name;
+          await addDoc(collection(db, 'categories'), { originalName: origName, ...newCat });
+        }
+        if (oldName !== savedCatName) {
+          const affectedTxs = transactions.filter(t => t.category === oldName);
+          const affectedBudgets = budgets.filter(b => b.categoryName === oldName);
+          await Promise.all([
+            ...affectedTxs.map(t => updateDoc(doc(db, 'transactions', t.id), { category: savedCatName })),
+            ...affectedBudgets.map(b => updateDoc(doc(db, 'budgets', b.id), { categoryName: savedCatName }))
+          ]);
+        }
+      }
+
+      setEditingCategory(null);
+      setIsCategoryModalOpen(false);
+      setCategoryForm({ name: '', type: 'expense', icon: 'Tag', color: 'indigo' });
+      showToast("Kategori berhasil diperbarui!");
+      return;
+    }
 
     if (user.isLocal) setCustomCategories(prev => [...prev, { id: 'cat-' + Date.now(), ...newCat }]);
     else await addDoc(collection(db, 'categories'), newCat);
@@ -1118,6 +1183,34 @@ export default function App() {
     setIsCategoryModalOpen(false);
     setCategoryForm({ name: '', type: 'expense', icon: 'Tag', color: 'indigo' });
     triggerSuccessPopup({ title: 'Kategori Ditambahkan!', subtitle: savedCatName, amount: null, details: [{ label: 'Kategori', value: savedCatName }] });
+  };
+
+  const handleDeleteCategory = async (catToDelete) => {
+    if (!catToDelete) return;
+    const isCustomDoc = Boolean(catToDelete.id && !String(catToDelete.id).startsWith('def-'));
+    const origName = catToDelete.originalName || catToDelete.name;
+
+    if (user.isLocal) {
+      if (isCustomDoc && !catToDelete.originalName) {
+        setCustomCategories(prev => prev.filter(c => c.id !== catToDelete.id));
+      } else {
+        setCustomCategories(prev => [
+          ...prev.filter(c => c.id !== catToDelete.id && c.originalName !== origName),
+          { id: 'cat-del-' + Date.now(), originalName: origName, isDeleted: true }
+        ]);
+      }
+    } else {
+      if (isCustomDoc && !catToDelete.originalName) {
+        await deleteDoc(doc(db, 'categories', catToDelete.id));
+      } else {
+        if (isCustomDoc) await deleteDoc(doc(db, 'categories', catToDelete.id));
+        await addDoc(collection(db, 'categories'), { originalName: origName, isDeleted: true });
+      }
+    }
+
+    setEditingCategory(null);
+    setIsCategoryModalOpen(false);
+    showToast(`Kategori "${catToDelete.name}" dihapus.`);
   };
 
   const handleClearAllData = async () => {
@@ -1284,13 +1377,28 @@ export default function App() {
             categorySummary={categorySummary}
             weeklySummary={weeklySummary}
             currentMonthMainTxs={currentMonthMainTxs}
+            onBackHome={() => setActiveTab('home')}
           />
         )}
 
         {activeTab === 'settings' && (
           <SettingsPage
             categories={categories}
-            onOpenCategoryModal={() => setIsCategoryModalOpen(true)}
+            onOpenCategoryModal={() => {
+              setEditingCategory(null);
+              setCategoryForm({ name: '', type: 'expense', icon: 'Tag', color: 'indigo' });
+              setIsCategoryModalOpen(true);
+            }}
+            onEditCategory={(cat) => {
+              setEditingCategory(cat);
+              setCategoryForm({
+                name: cat.name || '',
+                type: cat.type || 'expense',
+                icon: cat.icon || 'Tag',
+                color: cat.color || 'indigo'
+              });
+              setIsCategoryModalOpen(true);
+            }}
             onOpenResetModal={() => setIsConfirmResetOpen(true)}
             onLogout={() => {
               localStorage.removeItem('trakia_logged_in');
@@ -1318,6 +1426,8 @@ export default function App() {
             if (wallets.length > 0 && !savingForm.walletId) setSavingForm(prev => ({ ...prev, walletId: wallets[0].id }));
             setIsSavingModalOpen(true);
           } else {
+            setEditingCategory(null);
+            setCategoryForm({ name: '', type: 'expense', icon: 'Tag', color: 'indigo' });
             setIsCategoryModalOpen(true);
           }
         }}
@@ -1329,7 +1439,7 @@ export default function App() {
         isBudgetModalOpen={isBudgetModalOpen} setIsBudgetModalOpen={setIsBudgetModalOpen} budgetForm={budgetForm} setBudgetForm={setBudgetForm} handleAddBudget={handleAddBudget}
         selectedBudget={selectedBudget} setSelectedBudgetId={setSelectedBudgetId} selectedBudgetLogs={selectedBudgetLogs} handleUpdateBudget={handleUpdateBudget} handleUpdateBudgetLog={handleUpdateBudgetLog} handleDeleteBudget={handleDeleteBudget} handleDeleteBudgetLog={handleDeleteBudgetLog}
         isBudgetActionModalOpen={isBudgetActionModalOpen} setIsBudgetActionModalOpen={setIsBudgetActionModalOpen} budgetActionType={budgetActionType} setBudgetActionType={setBudgetActionType} budgetActionForm={budgetActionForm} setBudgetActionForm={setBudgetActionForm} handleBudgetAction={handleBudgetAction}
-        isCategoryModalOpen={isCategoryModalOpen} setIsCategoryModalOpen={setIsCategoryModalOpen} categoryForm={categoryForm} setCategoryForm={setCategoryForm} handleAddCategory={handleAddCategory}
+        isCategoryModalOpen={isCategoryModalOpen} setIsCategoryModalOpen={setIsCategoryModalOpen} editingCategory={editingCategory} setEditingCategory={setEditingCategory} categoryForm={categoryForm} setCategoryForm={setCategoryForm} handleAddCategory={handleAddCategory} handleDeleteCategory={handleDeleteCategory}
         isAdjustModalOpen={isAdjustModalOpen} setIsAdjustModalOpen={setIsAdjustModalOpen} setActiveTab={setActiveTab}
         isConfirmResetOpen={isConfirmResetOpen} setIsConfirmResetOpen={setIsConfirmResetOpen} isResetting={isResetting} handleClearAllData={handleClearAllData}
         successPopup={successPopup} setSuccessPopup={setSuccessPopup}
