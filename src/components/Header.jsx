@@ -4,7 +4,7 @@ import { TrakiaCalculatorIcon } from './TrakiaLogo';
 
 export default function Header({ activeTab, setActiveTab, hideBalance, setHideBalance, onOpenAdjust }) {
   return (
-    <div className="px-5 pt-3.5 pb-3 bg-white flex items-center justify-between border-b border-slate-100/80 shrink-0 z-20">
+    <div className="sticky top-0 left-0 right-0 px-5 pt-3.5 pb-3 bg-white/95 backdrop-blur-md flex items-center justify-between border-b border-slate-100/80 shrink-0 z-40 shadow-[0_2px_12px_rgba(0,0,0,0.02)]">
       <div
         onClick={() => setActiveTab('home')}
         className="flex items-center gap-2.5 cursor-pointer"

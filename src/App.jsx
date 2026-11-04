@@ -1262,9 +1262,9 @@ export default function App() {
   }
 
   return (
-    <div className="max-w-md mx-auto h-screen flex flex-col bg-white relative font-sans text-[#0F172A] select-none overflow-hidden shadow-2xl border-x border-slate-100">
+    <div className="max-w-md mx-auto h-[100dvh] flex flex-col bg-white relative font-sans text-[#0F172A] select-none overflow-hidden shadow-2xl border-x border-slate-100">
       {toast && (
-        <div className="absolute top-4 left-4 right-4 z-[90] flex items-center gap-2.5 px-4 py-3 rounded-2xl shadow-lg bg-[#0F172A] text-white text-sm font-medium">
+        <div className="fixed top-4 left-4 right-4 max-w-md mx-auto z-[90] flex items-center gap-2.5 px-4 py-3 rounded-2xl shadow-lg bg-[#0F172A] text-white text-sm font-medium">
           {toast.type === 'error' ? <AlertCircle size={18} className="text-rose-400 shrink-0" /> : <CheckCircle2 size={18} className="text-[#00C49A] shrink-0" />}
           <span className="flex-1">{toast.message}</span>
         </div>
@@ -1278,7 +1278,7 @@ export default function App() {
         onOpenAdjust={() => setIsAdjustModalOpen(true)}
       />
 
-      <div className="flex-1 overflow-y-auto pb-28 bg-white">
+      <div className="flex-1 overflow-y-auto overscroll-contain pb-32 bg-white">
         {activeTab === 'home' && (
           <HomePage
             currentDate={currentDate}

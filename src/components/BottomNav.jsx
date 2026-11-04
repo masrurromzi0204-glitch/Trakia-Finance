@@ -13,7 +13,10 @@ export default function BottomNav({ activeTab, setActiveTab, onPlusClick }) {
   ];
 
   return (
-    <div className="absolute bottom-0 left-0 right-0 bg-white/95 backdrop-blur-md border-t border-slate-100 px-3 pt-2 pb-3 flex items-center justify-between z-30 shadow-[0_-4px_20px_rgba(0,0,0,0.03)]">
+    <div
+      className="fixed bottom-0 left-0 right-0 max-w-md mx-auto bg-white/95 backdrop-blur-md border-t border-slate-100 px-3 pt-2 pb-3 flex items-center justify-between z-40 shadow-[0_-4px_20px_rgba(0,0,0,0.05)]"
+      style={{ paddingBottom: 'max(0.75rem, env(safe-area-inset-bottom))' }}
+    >
       {leftItems.map((item) => {
         const isActive = activeTab === item.id;
         return (
