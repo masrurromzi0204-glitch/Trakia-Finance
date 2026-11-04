@@ -1,16 +1,26 @@
 import React from 'react';
-import { ChevronRight } from 'lucide-react';
+import { ChevronRight, Plus, Wallet } from 'lucide-react';
 import { formatIDR } from '../utils/formatters';
 import CategoryBadge from '../components/CategoryBadge';
 
-export default function BudgetsPage({ budgets, categories, onSelectBudget }) {
+export default function BudgetsPage({ budgets, budgetLogs = [], categories, onSelectBudget, onOpenNewBudget }) {
   const accentColors = ['text-[#1D63DC]', 'text-amber-500', 'text-[#00C49A]', 'text-purple-600', 'text-rose-500'];
 
   return (
     <div className="px-5 pt-4 space-y-5">
-      <p className="text-xs text-slate-500 leading-relaxed">
-        Atur batas pengeluaran grup untuk bulan ini. Ketuk kartu anggaran untuk menambah dana atau mencatat rincian pengeluaran.
-      </p>
+      <div className="flex items-start justify-between gap-3">
+        <p className="text-xs text-slate-500 leading-relaxed flex-1">
+          Kelola pos anggaran atau grup pengeluaran (bisa dari <strong>multiple kantong dompet</strong>). Ketuk kartu untuk melihat rincian per kantong, edit, atau catat keluar.
+        </p>
+        {onOpenNewBudget && (
+          <button
+            onClick={onOpenNewBudget}
+            className="px-3.5 py-2 bg-[#1D63DC] hover:bg-blue-700 text-white rounded-full text-xs font-bold flex items-center gap-1.5 shadow-sm shadow-blue-500/20 shrink-0"
+          >
+            <Plus size={14} /> Buat
+          </button>
+        )}
+      </div>
 
       <div className="space-y-3">
         {budgets.map((b, idx) => {
@@ -19,6 +29,17 @@ export default function BudgetsPage({ budgets, categories, onSelectBudget }) {
           const remaining = Number(b.remaining) || 0;
           const percent = allocated > 0 ? Math.min(100, Math.round((spent / allocated) * 100)) : 0;
           const pctColor = accentColors[idx % accentColors.length];
+
+          // Cari semua kantong unik yang terlibat pada anggaran ini dari budgetLogs
+          const logsForBudget = budgetLogs.filter(l => l.budgetId === b.id);
+          const involvedWallets = Array.from(
+            new Set(
+              [
+                ...(b.storageForm ? [b.storageForm] : []),
+                ...logsForBudget.map(l => l.walletName).filter(Boolean)
+              ]
+            )
+          );
 
           return (
             <div
@@ -32,25 +53,32 @@ export default function BudgetsPage({ budgets, categories, onSelectBudget }) {
                   <div className="min-w-0">
                     <h3 className="font-extrabold text-[#0F172A] text-sm truncate">{b.name}</h3>
                     <p className="text-xs text-slate-400 font-medium mt-0.5">
-                      Rp{formatIDR(spent)} / Rp{formatIDR(allocated)}
+                      Terpakai: <strong className="text-rose-600">Rp{formatIDR(spent)}</strong>
+                      {allocated > 0 ? ` / Rp${formatIDR(allocated)}` : ' (Grup Fleksibel)'}
                     </p>
-                    <div className="flex items-center gap-2 mt-0.5">
-                      <p className="text-[11px] text-[#00C49A] font-bold">
+                    <div className="flex flex-wrap items-center gap-1.5 mt-1.5">
+                      <span className="text-[11px] text-[#00C49A] font-bold mr-1">
                         Sisa: Rp{formatIDR(remaining)}
-                      </p>
-                      {b.storageForm && (
-                        <span className="px-2 py-0.5 rounded-full bg-[#EFF6FF] text-[#1D63DC] text-[10px] font-bold">
-                          {b.storageForm}
+                      </span>
+                      {involvedWallets.map((wName) => (
+                        <span
+                          key={wName}
+                          className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-[#EFF6FF] text-[#1D63DC] text-[10px] font-bold"
+                        >
+                          <Wallet size={10} />
+                          {wName}
                         </span>
-                      )}
+                      ))}
                     </div>
                   </div>
                 </div>
 
                 <div className="flex items-center gap-2 shrink-0">
-                  <span className={`text-xs font-extrabold ${pctColor}`}>
-                    {percent}%
-                  </span>
+                  {allocated > 0 && (
+                    <span className={`text-xs font-extrabold ${pctColor}`}>
+                      {percent}%
+                    </span>
+                  )}
                   <ChevronRight size={16} className="text-slate-400" />
                 </div>
               </div>
@@ -60,11 +88,10 @@ export default function BudgetsPage({ budgets, categories, onSelectBudget }) {
 
         {budgets.length === 0 && (
           <div className="bg-slate-50/70 rounded-3xl p-8 text-center text-slate-400 text-sm border border-slate-100">
-            Belum ada pos anggaran. Tekan tombol biru <strong>+</strong> di bawah untuk membuat anggaran seperti <strong>Budget Dating</strong>.
+            Belum ada pos anggaran / grup pengeluaran. Tekan tombol biru <strong>+</strong> di bawah untuk membuat anggaran seperti <strong>Operasional Oktober</strong> atau <strong>Budget Dating</strong>.
           </div>
         )}
       </div>
     </div>
   );
 }
-

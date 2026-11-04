@@ -3,7 +3,7 @@ import { AlertCircle, CheckCircle2 } from 'lucide-react';
 import { signInAnonymously, onAuthStateChanged } from 'firebase/auth';
 import { collection, onSnapshot, doc, updateDoc, addDoc, deleteDoc } from 'firebase/firestore';
 
-import { auth, db, appId, PERSONAL_VAULT_ID, isFirebaseConfigured } from './firebase';
+import { auth, db, isFirebaseConfigured } from './firebase';
 import { DEFAULT_CATEGORIES } from './utils/constants';
 import { formatIDR, parseRawAmount, isSameMonth, formatShortDate } from './utils/formatters';
 
@@ -16,6 +16,7 @@ import LoginPage from './pages/LoginPage';
 import HomePage from './pages/HomePage';
 import WalletsPage from './pages/WalletsPage';
 import BudgetsPage from './pages/BudgetsPage';
+import SavingsPage from './pages/SavingsPage';
 import ReportsPage from './pages/ReportsPage';
 import SettingsPage from './pages/SettingsPage';
 
@@ -28,7 +29,7 @@ export default function App() {
   const [user, setUser] = useState(null);
   const [activeTab, setActiveTab] = useState('home');
   const [isLoading, setIsLoading] = useState(true);
-  const [currentDate, setCurrentDate] = useState(new Date(2026, 9, 27));
+  const [currentDate, setCurrentDate] = useState(new Date());
   const [toast, setToast] = useState(null);
   const [hideBalance, setHideBalance] = useState(false);
 
@@ -37,6 +38,8 @@ export default function App() {
   const [budgets, setBudgets] = useState([]);
   const [transactions, setTransactions] = useState([]);
   const [budgetLogs, setBudgetLogs] = useState([]);
+  const [savings, setSavings] = useState([]);
+  const [savingsLogs, setSavingsLogs] = useState([]);
   const [customCategories, setCustomCategories] = useState([]);
 
   // Modal States
@@ -48,6 +51,13 @@ export default function App() {
   const [selectedBudgetId, setSelectedBudgetId] = useState(null);
   const [isBudgetActionModalOpen, setIsBudgetActionModalOpen] = useState(false);
   const [budgetActionType, setBudgetActionType] = useState('expense');
+
+  // Savings Modal States
+  const [isSavingModalOpen, setIsSavingModalOpen] = useState(false);
+  const [selectedSavingId, setSelectedSavingId] = useState(null);
+  const [isSavingActionModalOpen, setIsSavingActionModalOpen] = useState(false);
+  const [savingActionType, setSavingActionType] = useState('deposit');
+
   const [isAdjustModalOpen, setIsAdjustModalOpen] = useState(false);
   const [isConfirmResetOpen, setIsConfirmResetOpen] = useState(false);
   const [isResetting, setIsResetting] = useState(false);
@@ -60,9 +70,17 @@ export default function App() {
   });
   const [walletForm, setWalletForm] = useState({ name: '', balance: '', type: 'Bank' });
   const [budgetForm, setBudgetForm] = useState({
-    name: '', initialAmount: '', walletId: '', storageForm: 'Cash', categoryName: 'Kebutuhan Dating', note: '', date: todayStr
+    name: '', initialAmount: '', walletId: '', storageForm: 'Multi-Dompet', categoryName: 'Kebutuhan Dating', note: '', date: todayStr
   });
-  const [budgetActionForm, setBudgetActionForm] = useState({ amount: '', walletId: '', note: '', date: todayStr });
+  const [budgetActionForm, setBudgetActionForm] = useState({
+    amount: '', walletId: '', sourceMode: 'direct_wallet', note: '', date: todayStr
+  });
+  const [savingForm, setSavingForm] = useState({
+    name: '', initialAmount: '', targetAmount: '', walletId: '', storedIn: 'Seabank', note: '', date: todayStr
+  });
+  const [savingActionForm, setSavingActionForm] = useState({
+    amount: '', walletId: '', note: '', date: todayStr
+  });
   const [categoryForm, setCategoryForm] = useState({ name: '', type: 'expense', icon: 'Tag', color: 'indigo' });
 
   const showToast = (message, type = 'success') => {
@@ -85,12 +103,16 @@ export default function App() {
         const savedBudgets = localStorage.getItem('trakia_budgets');
         const savedTxs = localStorage.getItem('trakia_transactions');
         const savedLogs = localStorage.getItem('trakia_budget_logs');
+        const savedSavings = localStorage.getItem('trakia_savings');
+        const savedSavingsLogs = localStorage.getItem('trakia_savings_logs');
         const savedCats = localStorage.getItem('trakia_categories');
 
         if (savedWallets) setWallets(JSON.parse(savedWallets));
         if (savedBudgets) setBudgets(JSON.parse(savedBudgets));
         if (savedTxs) setTransactions(JSON.parse(savedTxs));
         if (savedLogs) setBudgetLogs(JSON.parse(savedLogs));
+        if (savedSavings) setSavings(JSON.parse(savedSavings));
+        if (savedSavingsLogs) setSavingsLogs(JSON.parse(savedSavingsLogs));
         if (savedCats) setCustomCategories(JSON.parse(savedCats));
       } catch (e) {
         console.error("Local load error:", e);
@@ -99,10 +121,8 @@ export default function App() {
       return;
     }
 
-    console.log("☁️ Menginisialisasi Firebase Auth Anonymous...");
     signInAnonymously(auth)
       .then((userCred) => {
-        console.log("✅ Berhasil login anonim Firebase, UID:", userCred.user.uid);
         setUser({ uid: userCred.user.uid, isLocal: false });
       })
       .catch((err) => {
@@ -113,7 +133,6 @@ export default function App() {
 
     const unsubscribe = onAuthStateChanged(auth, (u) => {
       if (u) {
-        console.log("👤 User Firebase terdeteksi:", u.uid);
         setUser({ uid: u.uid, isLocal: false });
       }
     });
@@ -126,9 +145,11 @@ export default function App() {
       localStorage.setItem('trakia_budgets', JSON.stringify(budgets));
       localStorage.setItem('trakia_transactions', JSON.stringify(transactions));
       localStorage.setItem('trakia_budget_logs', JSON.stringify(budgetLogs));
+      localStorage.setItem('trakia_savings', JSON.stringify(savings));
+      localStorage.setItem('trakia_savings_logs', JSON.stringify(savingsLogs));
       localStorage.setItem('trakia_categories', JSON.stringify(customCategories));
     }
-  }, [wallets, budgets, transactions, budgetLogs, customCategories, user]);
+  }, [wallets, budgets, transactions, budgetLogs, savings, savingsLogs, customCategories, user]);
 
   // 2. Firestore Listeners
   useEffect(() => {
@@ -176,6 +197,24 @@ export default function App() {
       setIsLoading(false);
     });
 
+    const sRef = collection(db, 'savings');
+    const uS = onSnapshot(sRef, (snap) => {
+      const list = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      list.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+      setSavings(list);
+    }, (err) => {
+      console.error("Savings error:", err);
+    });
+
+    const slRef = collection(db, 'savings_logs');
+    const uSL = onSnapshot(slRef, (snap) => {
+      const logs = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      logs.sort((a, b) => b.date - a.date || (b.createdAt || 0) - (a.createdAt || 0));
+      setSavingsLogs(logs);
+    }, (err) => {
+      console.error("Savings logs error:", err);
+    });
+
     const cRef = collection(db, 'categories');
     const uC = onSnapshot(cRef, (snap) => {
       setCustomCategories(snap.docs.map(d => ({ id: d.id, ...d.data() })));
@@ -184,7 +223,7 @@ export default function App() {
       setIsLoading(false);
     });
 
-    return () => { uW(); uB(); uT(); uBL(); uC(); };
+    return () => { uW(); uB(); uT(); uBL(); uS(); uSL(); uC(); };
   }, [user]);
 
   // Derived Calculations
@@ -192,8 +231,12 @@ export default function App() {
   const selectedBudget = useMemo(() => budgets.find(b => b.id === selectedBudgetId) || null, [budgets, selectedBudgetId]);
   const selectedBudgetLogs = useMemo(() => selectedBudgetId ? budgetLogs.filter(l => l.budgetId === selectedBudgetId) : [], [budgetLogs, selectedBudgetId]);
 
+  const selectedSaving = useMemo(() => savings.find(s => s.id === selectedSavingId) || null, [savings, selectedSavingId]);
+  const selectedSavingLogs = useMemo(() => selectedSavingId ? savingsLogs.filter(l => l.savingId === selectedSavingId) : [], [savingsLogs, selectedSavingId]);
+
   const totalWalletBalance = useMemo(() => wallets.reduce((s, w) => s + (Number(w.balance) || 0), 0), [wallets]);
   const totalRemainingBudget = useMemo(() => budgets.reduce((s, b) => s + (Number(b.remaining) || 0), 0), [budgets]);
+  const totalSavingsBalance = useMemo(() => savings.reduce((s, item) => s + (Number(item.collectedAmount) || 0), 0), [savings]);
 
   const currentMonthMainTxs = useMemo(() => {
     return transactions.filter(tx => !tx.isInternalBudgetExpense && isSameMonth(new Date(tx.date), currentDate));
@@ -262,9 +305,9 @@ export default function App() {
   };
 
   // TX Detail Modal State
-  const [selectedTx, setSelectedTx] = useState(null);       // tx yang diklik
+  const [selectedTx, setSelectedTx] = useState(null);
   const [isTxDetailOpen, setIsTxDetailOpen] = useState(false);
-  const [isEditingTx, setIsEditingTx] = useState(false);     // mode edit di detail modal
+  const [isEditingTx, setIsEditingTx] = useState(false);
   const [editTxForm, setEditTxForm] = useState({});
 
   const openTxDetail = (tx) => {
@@ -283,7 +326,6 @@ export default function App() {
 
   const handleDeleteTx = async (tx) => {
     if (!tx) return;
-    // Kembalikan saldo dompet
     const wallet = wallets.find(w => w.id === tx.walletId);
     if (wallet) {
       const revertedBalance = tx.type === 'expense'
@@ -302,7 +344,7 @@ export default function App() {
     }
     setIsTxDetailOpen(false);
     setSelectedTx(null);
-    showToast('Transaksi dihapus.');
+    showToast('Transaksi dihapus & saldo kantung dikembalikan.');
   };
 
   const handleUpdateTx = async (e) => {
@@ -315,10 +357,8 @@ export default function App() {
     const newWallet = wallets.find(w => w.id === editTxForm.walletId);
     if (!newWallet) return showToast('Pilih dompet terlebih dahulu!', 'error');
 
-    // Hitung saldo: revert transaksi lama, terapkan transaksi baru
     let walletUpdates = {};
 
-    // Revert saldo dompet lama
     if (oldWallet) {
       const revertOld = selectedTx.type === 'expense'
         ? oldWallet.balance + Number(selectedTx.amount)
@@ -326,7 +366,6 @@ export default function App() {
       walletUpdates[oldWallet.id] = revertOld;
     }
 
-    // Terapkan transaksi baru
     const baseBalance = walletUpdates[newWallet.id] !== undefined
       ? walletUpdates[newWallet.id]
       : newWallet.balance;
@@ -397,8 +436,8 @@ export default function App() {
       subtitle: txForm.note || txForm.category, amount, amountType: txForm.type,
       details: [
         { label: 'Kategori', value: txForm.category },
-        { label: 'Dompet', value: wallet.name },
-        { label: 'Sisa Saldo Dompet', value: `Rp ${formatIDR(newBalance)}` }
+        { label: 'Kantung Dompet', value: wallet.name },
+        { label: 'Sisa Saldo Kantung', value: `Rp ${formatIDR(newBalance)}` }
       ]
     });
   };
@@ -428,7 +467,7 @@ export default function App() {
     setEditingWallet(null);
     setWalletForm({ name: '', balance: '', type: 'Bank' });
     triggerSuccessPopup({
-      title: isEdit ? 'Dompet Diperbarui!' : 'Dompet Ditambahkan!',
+      title: isEdit ? 'Kantong Diperbarui!' : 'Kantong Ditambahkan!',
       subtitle: `Kantong ${savedName} siap digunakan`, amount: balanceVal, amountType: 'neutral',
       details: [{ label: 'Nama Kantong', value: savedName }, { label: 'Tipe', value: walletForm.type || 'Bank' }]
     });
@@ -439,9 +478,10 @@ export default function App() {
     else await deleteDoc(doc(db, 'wallets', walletId));
     setIsWalletModalOpen(false);
     setEditingWallet(null);
-    showToast("Dompet dihapus.");
+    showToast("Kantong dompet dihapus.");
   };
 
+  // BUDGET HANDLERS (TERMASUK EDIT, MULTI-WALLET, & HAPUS DENGAN PENGEMBALIAN SALDO)
   const handleAddBudget = async (e) => {
     e.preventDefault();
     if (!budgetForm.name.trim()) return showToast("Nama anggaran wajib diisi!", "error");
@@ -450,11 +490,11 @@ export default function App() {
 
     if (initialAmount > 0) {
       sourceWallet = wallets.find(w => w.id === budgetForm.walletId);
-      if (!sourceWallet) return showToast("Pilih dompet sumber untuk alokasi saldo awal!", "error");
+      if (!sourceWallet) return showToast("Pilih kantung sumber untuk alokasi saldo awal!", "error");
       if (sourceWallet.balance < initialAmount) return showToast(`Saldo di ${sourceWallet.name} tidak cukup!`, "error");
     }
 
-    const chosenStorage = budgetForm.storageForm || (sourceWallet ? sourceWallet.name : 'Cash');
+    const chosenStorage = budgetForm.storageForm || (sourceWallet ? sourceWallet.name : 'Multi-Dompet');
     const newBudgetData = {
       name: budgetForm.name.trim(), categoryName: budgetForm.categoryName || 'Kebutuhan Dating',
       storageForm: chosenStorage, allocated: initialAmount, spent: 0, remaining: initialAmount, createdAt: Date.now()
@@ -468,12 +508,12 @@ export default function App() {
         setWallets(prev => prev.map(w => w.id === sourceWallet.id ? { ...w, balance: w.balance - initialAmount } : w));
         setTransactions(prev => [{
           id: 'tx-' + Date.now(), type: 'expense', amount: initialAmount, category: budgetForm.categoryName || budgetForm.name.trim(),
-          note: budgetForm.note.trim() || `${budgetForm.name.trim()} (${sourceWallet.name})`, walletId: sourceWallet.id, walletName: sourceWallet.name,
+          note: budgetForm.note.trim() || `Alokasi ${budgetForm.name.trim()} (${sourceWallet.name})`, walletId: sourceWallet.id, walletName: sourceWallet.name,
           budgetId: localBudgetId, isBudgetAllocation: true, date: txDate, createdAt: Date.now()
         }, ...prev]);
         setBudgetLogs(prev => [{
           id: 'bl-' + Date.now(), budgetId: localBudgetId, budgetName: budgetForm.name.trim(), type: 'allocate',
-          amount: initialAmount, note: budgetForm.note.trim() || `Alokasi awal dari ${sourceWallet.name}`, walletName: sourceWallet.name, date: txDate, createdAt: Date.now()
+          amount: initialAmount, note: budgetForm.note.trim() || `Alokasi awal dari ${sourceWallet.name}`, walletId: sourceWallet.id, walletName: sourceWallet.name, date: txDate, createdAt: Date.now()
         }, ...prev]);
       }
     } else {
@@ -483,26 +523,41 @@ export default function App() {
         await updateDoc(doc(db, 'wallets', sourceWallet.id), { balance: sourceWallet.balance - initialAmount });
         await addDoc(collection(db, 'transactions'), {
           type: 'expense', amount: initialAmount, category: budgetForm.categoryName || budgetForm.name.trim(),
-          note: budgetForm.note.trim() || `${budgetForm.name.trim()} (${sourceWallet.name})`, walletId: sourceWallet.id, walletName: sourceWallet.name,
+          note: budgetForm.note.trim() || `Alokasi ${budgetForm.name.trim()} (${sourceWallet.name})`, walletId: sourceWallet.id, walletName: sourceWallet.name,
           budgetId: budgetDocRef.id, isBudgetAllocation: true, date: txDate, createdAt: Date.now()
         });
         await addDoc(collection(db, 'budget_logs'), {
           budgetId: budgetDocRef.id, budgetName: budgetForm.name.trim(), type: 'allocate',
-          amount: initialAmount, note: budgetForm.note.trim() || `Alokasi awal dari ${sourceWallet.name}`, walletName: sourceWallet.name, date: txDate, createdAt: Date.now()
+          amount: initialAmount, note: budgetForm.note.trim() || `Alokasi awal dari ${sourceWallet.name}`, walletId: sourceWallet.id, walletName: sourceWallet.name, date: txDate, createdAt: Date.now()
         });
       }
     }
 
     setIsBudgetModalOpen(false);
-    setBudgetForm({ name: '', initialAmount: '', walletId: '', storageForm: 'Cash', categoryName: 'Kebutuhan Dating', note: '', date: todayStr });
+    setBudgetForm({ name: '', initialAmount: '', walletId: '', storageForm: 'Multi-Dompet', categoryName: 'Kebutuhan Dating', note: '', date: todayStr });
     triggerSuccessPopup({
-      title: 'Anggaran Berhasil Dibuat!', subtitle: newBudgetData.name, amount: initialAmount, amountType: 'neutral',
+      title: 'Grup Anggaran Dibuat!', subtitle: newBudgetData.name, amount: initialAmount, amountType: 'neutral',
       details: [
-        { label: 'Pos Anggaran', value: newBudgetData.name },
-        { label: 'Disimpan Dalam Bentuk', value: chosenStorage },
+        { label: 'Nama Grup', value: newBudgetData.name },
+        { label: 'Mode Kantung', value: chosenStorage },
         { label: 'Kategori', value: newBudgetData.categoryName }
       ]
     });
+  };
+
+  const handleUpdateBudget = async (budgetId, updatedFields) => {
+    if (!updatedFields.name?.trim()) return showToast("Nama anggaran tidak boleh kosong!", "error");
+    const cleanData = {
+      name: updatedFields.name.trim(),
+      categoryName: updatedFields.categoryName || 'Kebutuhan Dating',
+      storageForm: updatedFields.storageForm || 'Multi-Dompet'
+    };
+    if (user.isLocal) {
+      setBudgets(prev => prev.map(b => b.id === budgetId ? { ...b, ...cleanData } : b));
+    } else {
+      await updateDoc(doc(db, 'budgets', budgetId), cleanData);
+    }
+    showToast("Informasi anggaran berhasil diperbarui!");
   };
 
   const handleBudgetAction = async (e) => {
@@ -514,7 +569,7 @@ export default function App() {
 
     if (budgetActionType === 'add_money') {
       const wallet = wallets.find(w => w.id === budgetActionForm.walletId);
-      if (!wallet) return showToast("Pilih dompet sumber dana!", "error");
+      if (!wallet) return showToast("Pilih kantung sumber dana!", "error");
       if (wallet.balance < amount) return showToast(`Saldo ${wallet.name} tidak mencukupi!`, "error");
 
       const newRemaining = (Number(selectedBudget.remaining) || 0) + amount;
@@ -530,7 +585,7 @@ export default function App() {
         }, ...prev]);
         setBudgetLogs(prev => [{
           id: 'bl-' + Date.now(), budgetId: selectedBudget.id, budgetName: selectedBudget.name, type: 'allocate',
-          amount, note: budgetActionForm.note.trim() || `Tambah dana dari ${wallet.name}`, walletName: wallet.name, date: actionDate, createdAt: Date.now()
+          amount, note: budgetActionForm.note.trim() || `Tambah dana dari ${wallet.name}`, walletId: wallet.id, walletName: wallet.name, date: actionDate, createdAt: Date.now()
         }, ...prev]);
       } else {
         await updateDoc(doc(db, 'wallets', wallet.id), { balance: wallet.balance - amount });
@@ -542,65 +597,512 @@ export default function App() {
         });
         await addDoc(collection(db, 'budget_logs'), {
           budgetId: selectedBudget.id, budgetName: selectedBudget.name, type: 'allocate',
-          amount, note: budgetActionForm.note.trim() || `Tambah dana dari ${wallet.name}`, walletName: wallet.name, date: actionDate, createdAt: Date.now()
+          amount, note: budgetActionForm.note.trim() || `Tambah dana dari ${wallet.name}`, walletId: wallet.id, walletName: wallet.name, date: actionDate, createdAt: Date.now()
         });
       }
 
       triggerSuccessPopup({
         title: 'Dana Anggaran Ditambahkan!', subtitle: budgetActionForm.note.trim() || `Top-up ${selectedBudget.name}`, amount, amountType: 'income',
-        details: [{ label: 'Anggaran', value: selectedBudget.name }, { label: 'Sisa Anggaran Baru', value: `Rp ${formatIDR(newRemaining)}` }]
+        details: [
+          { label: 'Anggaran', value: selectedBudget.name },
+          { label: 'Dari Kantung', value: wallet.name },
+          { label: 'Sisa Anggaran Baru', value: `Rp ${formatIDR(newRemaining)}` }
+        ]
       });
     } else {
-      if ((Number(selectedBudget.remaining) || 0) < amount) return showToast("Sisa saldo anggaran tidak mencukupi!", "error");
+      // Pengeluaran di dalam grup anggaran:
+      // Mode 1: 'direct_wallet' -> potong langsung dari kantung dompet yang dipilih (mendukung multiple dompet di 1 card!)
+      // Mode 2: 'budget_balance' -> potong dari sisa saldo alokasi anggaran
       if (!budgetActionForm.note.trim()) return showToast("Isi rincian penggunaan dana!", "error");
 
-      const newRemaining = (Number(selectedBudget.remaining) || 0) - amount;
-      const newSpent = (Number(selectedBudget.spent) || 0) + amount;
+      if (budgetActionForm.sourceMode === 'direct_wallet') {
+        const wallet = wallets.find(w => w.id === budgetActionForm.walletId);
+        if (!wallet) return showToast("Pilih kantung dompet yang akan dipotong!", "error");
+        if (wallet.balance < amount) return showToast(`Saldo kantung ${wallet.name} tidak mencukupi!`, "error");
 
-      if (user.isLocal) {
-        setBudgets(prev => prev.map(b => b.id === selectedBudget.id ? { ...b, spent: newSpent, remaining: newRemaining } : b));
-        setBudgetLogs(prev => [{
-          id: 'bl-' + Date.now(), budgetId: selectedBudget.id, budgetName: selectedBudget.name, type: 'expense',
-          amount, note: budgetActionForm.note.trim(), date: actionDate, createdAt: Date.now()
-        }, ...prev]);
+        const newSpent = (Number(selectedBudget.spent) || 0) + amount;
+        const newAllocated = (Number(selectedBudget.allocated) || 0) + amount;
+        const newWalletBalance = wallet.balance - amount;
+
+        if (user.isLocal) {
+          setWallets(prev => prev.map(w => w.id === wallet.id ? { ...w, balance: newWalletBalance } : w));
+          setBudgets(prev => prev.map(b => b.id === selectedBudget.id ? { ...b, allocated: newAllocated, spent: newSpent } : b));
+          setTransactions(prev => [{
+            id: 'tx-' + Date.now(), type: 'expense', amount, category: selectedBudget.categoryName || selectedBudget.name,
+            note: `${selectedBudget.name}: ${budgetActionForm.note.trim()}`, walletId: wallet.id, walletName: wallet.name,
+            budgetId: selectedBudget.id, isBudgetAllocation: true, date: actionDate, createdAt: Date.now()
+          }, ...prev]);
+          setBudgetLogs(prev => [{
+            id: 'bl-' + Date.now(), budgetId: selectedBudget.id, budgetName: selectedBudget.name, type: 'expense',
+            amount, note: budgetActionForm.note.trim(), walletId: wallet.id, walletName: wallet.name, isDirectWallet: true, date: actionDate, createdAt: Date.now()
+          }, ...prev]);
+        } else {
+          await updateDoc(doc(db, 'wallets', wallet.id), { balance: newWalletBalance });
+          await updateDoc(doc(db, 'budgets', selectedBudget.id), { allocated: newAllocated, spent: newSpent });
+          await addDoc(collection(db, 'transactions'), {
+            type: 'expense', amount, category: selectedBudget.categoryName || selectedBudget.name,
+            note: `${selectedBudget.name}: ${budgetActionForm.note.trim()}`, walletId: wallet.id, walletName: wallet.name,
+            budgetId: selectedBudget.id, isBudgetAllocation: true, date: actionDate, createdAt: Date.now()
+          });
+          await addDoc(collection(db, 'budget_logs'), {
+            budgetId: selectedBudget.id, budgetName: selectedBudget.name, type: 'expense',
+            amount, note: budgetActionForm.note.trim(), walletId: wallet.id, walletName: wallet.name, isDirectWallet: true, date: actionDate, createdAt: Date.now()
+          });
+        }
+
+        triggerSuccessPopup({
+          title: 'Pengeluaran Grup Tercatat!', subtitle: budgetActionForm.note.trim(), amount, amountType: 'expense',
+          details: [
+            { label: 'Grup Anggaran', value: selectedBudget.name },
+            { label: 'Dipotong dari Kantung', value: wallet.name },
+            { label: `Sisa Saldo ${wallet.name}`, value: `Rp ${formatIDR(newWalletBalance)}` }
+          ]
+        });
       } else {
-        await updateDoc(doc(db, 'budgets', selectedBudget.id), { spent: newSpent, remaining: newRemaining });
-        await addDoc(collection(db, 'budget_logs'), {
-          budgetId: selectedBudget.id, budgetName: selectedBudget.name, type: 'expense',
-          amount, note: budgetActionForm.note.trim(), date: actionDate, createdAt: Date.now()
+        if ((Number(selectedBudget.remaining) || 0) < amount) return showToast("Sisa saldo anggaran tidak mencukupi! Pilih opsi 'Pilih Kantung Dompet' untuk memotong kantung lain.", "error");
+
+        const newRemaining = (Number(selectedBudget.remaining) || 0) - amount;
+        const newSpent = (Number(selectedBudget.spent) || 0) + amount;
+
+        if (user.isLocal) {
+          setBudgets(prev => prev.map(b => b.id === selectedBudget.id ? { ...b, spent: newSpent, remaining: newRemaining } : b));
+          setBudgetLogs(prev => [{
+            id: 'bl-' + Date.now(), budgetId: selectedBudget.id, budgetName: selectedBudget.name, type: 'expense',
+            amount, note: budgetActionForm.note.trim(), walletName: selectedBudget.storageForm || 'Saldo Anggaran', date: actionDate, createdAt: Date.now()
+          }, ...prev]);
+        } else {
+          await updateDoc(doc(db, 'budgets', selectedBudget.id), { spent: newSpent, remaining: newRemaining });
+          await addDoc(collection(db, 'budget_logs'), {
+            budgetId: selectedBudget.id, budgetName: selectedBudget.name, type: 'expense',
+            amount, note: budgetActionForm.note.trim(), walletName: selectedBudget.storageForm || 'Saldo Anggaran', date: actionDate, createdAt: Date.now()
+          });
+        }
+
+        triggerSuccessPopup({
+          title: 'Pengeluaran Budget Tercatat!', subtitle: budgetActionForm.note.trim(), amount, amountType: 'expense',
+          details: [{ label: 'Pos Anggaran', value: selectedBudget.name }, { label: 'Sisa Saldo Budget', value: `Rp ${formatIDR(newRemaining)}` }]
         });
       }
-
-      triggerSuccessPopup({
-        title: 'Pengeluaran Budget Tercatat!', subtitle: budgetActionForm.note.trim(), amount, amountType: 'expense',
-        details: [{ label: 'Pos Anggaran', value: selectedBudget.name }, { label: 'Sisa Saldo Budget', value: `Rp ${formatIDR(newRemaining)}` }]
-      });
     }
 
     setIsBudgetActionModalOpen(false);
-    setBudgetActionForm({ amount: '', walletId: '', note: '', date: todayStr });
+    setBudgetActionForm({ amount: '', walletId: '', sourceMode: 'direct_wallet', note: '', date: todayStr });
+  };
+
+  const handleUpdateBudgetLog = async (logItem, editLogForm) => {
+    if (!selectedBudget || !logItem) return;
+    const newAmount = parseRawAmount(editLogForm.amount);
+    if (newAmount <= 0) return showToast("Masukkan nominal yang valid!", "error");
+
+    const oldAmount = Number(logItem.amount) || 0;
+    const diff = newAmount - oldAmount;
+    const newDate = editLogForm.date ? new Date(editLogForm.date + 'T12:00:00').getTime() : logItem.date;
+    const chosenWallet = wallets.find(w => w.id === editLogForm.walletId) || wallets.find(w => w.name === logItem.walletName);
+
+    let updatedAllocated = Number(selectedBudget.allocated) || 0;
+    let updatedSpent = Number(selectedBudget.spent) || 0;
+    let updatedRemaining = Number(selectedBudget.remaining) || 0;
+
+    if (logItem.type === 'allocate') {
+      updatedAllocated = Math.max(0, updatedAllocated + diff);
+      updatedRemaining = Math.max(0, updatedRemaining + diff);
+      if (chosenWallet && diff !== 0) {
+        const newWBal = Math.max(0, (Number(chosenWallet.balance) || 0) - diff);
+        if (user.isLocal) {
+          setWallets(prev => prev.map(w => w.id === chosenWallet.id ? { ...w, balance: newWBal } : w));
+        } else {
+          await updateDoc(doc(db, 'wallets', chosenWallet.id), { balance: newWBal });
+        }
+      }
+    } else {
+      updatedSpent = Math.max(0, updatedSpent + diff);
+      if (logItem.isDirectWallet) {
+        updatedAllocated = Math.max(0, updatedAllocated + diff);
+        if (chosenWallet && diff !== 0) {
+          const newWBal = Math.max(0, (Number(chosenWallet.balance) || 0) - diff);
+          if (user.isLocal) {
+            setWallets(prev => prev.map(w => w.id === chosenWallet.id ? { ...w, balance: newWBal } : w));
+          } else {
+            await updateDoc(doc(db, 'wallets', chosenWallet.id), { balance: newWBal });
+          }
+        }
+      } else {
+        updatedRemaining = Math.max(0, updatedRemaining - diff);
+      }
+    }
+
+    const updatedLogData = {
+      amount: newAmount,
+      note: editLogForm.note?.trim() || logItem.note || '',
+      date: newDate,
+      ...(chosenWallet ? { walletId: chosenWallet.id, walletName: chosenWallet.name } : {})
+    };
+
+    if (user.isLocal) {
+      setBudgets(prev => prev.map(b => b.id === selectedBudget.id ? {
+        ...b, allocated: updatedAllocated, spent: updatedSpent, remaining: updatedRemaining
+      } : b));
+      setBudgetLogs(prev => prev.map(l => l.id === logItem.id ? { ...l, ...updatedLogData } : l));
+    } else {
+      await updateDoc(doc(db, 'budgets', selectedBudget.id), {
+        allocated: updatedAllocated, spent: updatedSpent, remaining: updatedRemaining
+      });
+      await updateDoc(doc(db, 'budget_logs', logItem.id), updatedLogData);
+    }
+
+    showToast("Rincian cashflow anggaran berhasil diperbarui!");
   };
 
   const handleDeleteBudgetLog = async (logItem) => {
     if (!selectedBudget) return;
-    const updatedSpent = Math.max(0, (Number(selectedBudget.spent) || 0) - logItem.amount);
-    const updatedRemaining = (Number(selectedBudget.remaining) || 0) + logItem.amount;
+    const logAmt = Number(logItem.amount) || 0;
 
+    if (logItem.type === 'allocate') {
+      const updatedAlloc = Math.max(0, (Number(selectedBudget.allocated) || 0) - logAmt);
+      const updatedRem = Math.max(0, (Number(selectedBudget.remaining) || 0) - logAmt);
+      const targetW = wallets.find(w => w.id === logItem.walletId) || wallets.find(w => w.name === logItem.walletName);
+
+      if (user.isLocal) {
+        if (targetW) setWallets(prev => prev.map(w => w.id === targetW.id ? { ...w, balance: (Number(w.balance) || 0) + logAmt } : w));
+        setBudgets(prev => prev.map(b => b.id === selectedBudget.id ? { ...b, allocated: updatedAlloc, remaining: updatedRem } : b));
+        setBudgetLogs(prev => prev.filter(l => l.id !== logItem.id));
+      } else {
+        if (targetW) await updateDoc(doc(db, 'wallets', targetW.id), { balance: (Number(targetW.balance) || 0) + logAmt });
+        await updateDoc(doc(db, 'budgets', selectedBudget.id), { allocated: updatedAlloc, remaining: updatedRem });
+        await deleteDoc(doc(db, 'budget_logs', logItem.id));
+      }
+      showToast("Alokasi dihapus & saldo dikembalikan ke kantung.");
+      return;
+    }
+
+    const updatedSpent = Math.max(0, (Number(selectedBudget.spent) || 0) - logAmt);
+
+    if (logItem.isDirectWallet && (logItem.walletId || logItem.walletName)) {
+      const targetW = wallets.find(w => w.id === logItem.walletId) || wallets.find(w => w.name === logItem.walletName);
+      const updatedAlloc = Math.max(0, (Number(selectedBudget.allocated) || 0) - logAmt);
+      if (user.isLocal) {
+        if (targetW) setWallets(prev => prev.map(w => w.id === targetW.id ? { ...w, balance: w.balance + logAmt } : w));
+        setBudgets(prev => prev.map(b => b.id === selectedBudget.id ? { ...b, spent: updatedSpent, allocated: updatedAlloc } : b));
+        setBudgetLogs(prev => prev.filter(l => l.id !== logItem.id));
+      } else {
+        if (targetW) await updateDoc(doc(db, 'wallets', targetW.id), { balance: targetW.balance + logAmt });
+        await updateDoc(doc(db, 'budgets', selectedBudget.id), { spent: updatedSpent, allocated: updatedAlloc });
+        await deleteDoc(doc(db, 'budget_logs', logItem.id));
+      }
+      showToast(`Rincian dihapus & Rp ${formatIDR(logAmt)} dikembalikan ke ${targetW?.name || 'kantung'}.`);
+      return;
+    }
+
+    const updatedRemaining = (Number(selectedBudget.remaining) || 0) + logAmt;
     if (user.isLocal) {
-      if (logItem.type === 'expense') setBudgets(prev => prev.map(b => b.id === selectedBudget.id ? { ...b, spent: updatedSpent, remaining: updatedRemaining } : b));
+      setBudgets(prev => prev.map(b => b.id === selectedBudget.id ? { ...b, spent: updatedSpent, remaining: updatedRemaining } : b));
       setBudgetLogs(prev => prev.filter(l => l.id !== logItem.id));
     } else {
-      if (logItem.type === 'expense') await updateDoc(doc(db, 'budgets', selectedBudget.id), { spent: updatedSpent, remaining: updatedRemaining });
+      await updateDoc(doc(db, 'budgets', selectedBudget.id), { spent: updatedSpent, remaining: updatedRemaining });
       await deleteDoc(doc(db, 'budget_logs', logItem.id));
     }
-    showToast("Riwayat rincian dihapus.");
+    showToast("Riwayat rincian dihapus & saldo anggaran dikembalikan.");
   };
 
-  const handleDeleteBudget = async (budgetId) => {
-    if (user.isLocal) setBudgets(prev => prev.filter(b => b.id !== budgetId));
-    else await deleteDoc(doc(db, 'budgets', budgetId));
+  const handleDeleteBudget = async (budgetId, deleteMode = 'refund', refundWalletId = '') => {
+    const targetBudget = budgets.find(b => b.id === budgetId);
+    const remainingAmt = Number(targetBudget?.remaining) || 0;
+    const refundWallet = wallets.find(w => w.id === refundWalletId);
+    const logsToDelete = budgetLogs.filter(l => l.budgetId === budgetId);
+    const txsToDelete = transactions.filter(t => t.budgetId === budgetId);
+
+    if (deleteMode === 'refund' && remainingAmt > 0 && refundWallet) {
+      const newWalletBal = (Number(refundWallet.balance) || 0) + remainingAmt;
+      if (user.isLocal) {
+        setWallets(prev => prev.map(w => w.id === refundWallet.id ? { ...w, balance: newWalletBal } : w));
+        setTransactions(prev => [{
+          id: 'tx-' + Date.now(), type: 'income', amount: remainingAmt,
+          category: 'Pengembalian Sisa Anggaran', note: `Kembali sisa anggaran ${targetBudget.name}`,
+          walletId: refundWallet.id, walletName: refundWallet.name, date: Date.now(), createdAt: Date.now()
+        }, ...prev]);
+      } else {
+        await updateDoc(doc(db, 'wallets', refundWallet.id), { balance: newWalletBal });
+        await addDoc(collection(db, 'transactions'), {
+          type: 'income', amount: remainingAmt,
+          category: 'Pengembalian Sisa Anggaran', note: `Kembali sisa anggaran ${targetBudget.name}`,
+          walletId: refundWallet.id, walletName: refundWallet.name, date: Date.now(), createdAt: Date.now()
+        });
+      }
+    }
+
+    if (user.isLocal) {
+      setBudgets(prev => prev.filter(b => b.id !== budgetId));
+      setBudgetLogs(prev => prev.filter(l => l.budgetId !== budgetId));
+      if (deleteMode === 'clean') {
+        setTransactions(prev => prev.filter(t => t.budgetId !== budgetId));
+      }
+    } else {
+      await deleteDoc(doc(db, 'budgets', budgetId));
+      await Promise.all(logsToDelete.map(l => deleteDoc(doc(db, 'budget_logs', l.id))));
+      if (deleteMode === 'clean') {
+        await Promise.all(txsToDelete.map(t => deleteDoc(doc(db, 'transactions', t.id))));
+      }
+    }
+
     setSelectedBudgetId(null);
-    showToast("Anggaran dihapus.");
+    if (deleteMode === 'refund' && remainingAmt > 0 && refundWallet) {
+      triggerSuccessPopup({
+        title: 'Anggaran Dihapus & Saldo Kembali!',
+        subtitle: `Sisa anggaran ${targetBudget.name} telah dikembalikan`,
+        amount: remainingAmt,
+        amountType: 'income',
+        details: [
+          { label: 'Dikembalikan Ke Kantung', value: refundWallet.name },
+          { label: 'Saldo Kantung Sekarang', value: `Rp ${formatIDR((Number(refundWallet.balance) || 0) + remainingAmt)}` }
+        ]
+      });
+    } else {
+      triggerSuccessPopup({
+        title: 'Anggaran Dihapus Permanen!',
+        subtitle: `Seluruh data anggaran "${targetBudget?.name || ''}" telah dibersihkan`,
+        amount: null,
+        details: [
+          { label: 'Mode Hapus', value: 'Hapus Permanen (Clean Data)' },
+          { label: 'Riwayat Dibersihkan', value: `${logsToDelete.length} item rincian` }
+        ]
+      });
+    }
+  };
+
+  // SAVINGS (TABUNGAN) HANDLERS
+  const handleAddSaving = async (e) => {
+    e.preventDefault();
+    if (!savingForm.name.trim()) return showToast("Isi tujuan tabungan terlebih dahulu!", "error");
+    const initialAmount = parseRawAmount(savingForm.initialAmount);
+    const targetAmount = parseRawAmount(savingForm.targetAmount);
+    if (initialAmount <= 0) return showToast("Masukkan nominal setoran awal tabungan!", "error");
+
+    const sourceWallet = wallets.find(w => w.id === savingForm.walletId);
+    if (!sourceWallet) return showToast("Pilih kantung sumber dana tabungan!", "error");
+    if (sourceWallet.balance < initialAmount) return showToast(`Saldo di kantung ${sourceWallet.name} tidak mencukupi!`, "error");
+
+    const storedInPlace = savingForm.storedIn.trim() || 'Rekening Tabungan';
+    const txDate = new Date((savingForm.date || todayStr) + 'T12:00:00').getTime();
+    const newWalletBal = sourceWallet.balance - initialAmount;
+
+    const newSavingData = {
+      name: savingForm.name.trim(),
+      targetAmount: targetAmount || 0,
+      collectedAmount: initialAmount,
+      storedIn: storedInPlace,
+      createdAt: Date.now()
+    };
+
+    if (user.isLocal) {
+      const localSavingId = 's-' + Date.now();
+      setWallets(prev => prev.map(w => w.id === sourceWallet.id ? { ...w, balance: newWalletBal } : w));
+      setSavings(prev => [{ id: localSavingId, ...newSavingData }, ...prev]);
+      setTransactions(prev => [{
+        id: 'tx-' + Date.now(), type: 'expense', amount: initialAmount,
+        category: `Tabungan · ${savingForm.name.trim()}`,
+        note: savingForm.note.trim() || `Setor tabungan ${savingForm.name.trim()} (Disimpan di ${storedInPlace})`,
+        walletId: sourceWallet.id, walletName: sourceWallet.name,
+        savingId: localSavingId, isSavingAllocation: true, date: txDate, createdAt: Date.now()
+      }, ...prev]);
+      setSavingsLogs(prev => [{
+        id: 'sl-' + Date.now(), savingId: localSavingId, savingName: savingForm.name.trim(),
+        type: 'deposit', amount: initialAmount, walletId: sourceWallet.id, walletName: sourceWallet.name,
+        storedIn: storedInPlace, note: savingForm.note.trim() || `Setoran awal dari ${sourceWallet.name}`,
+        date: txDate, createdAt: Date.now()
+      }, ...prev]);
+    } else {
+      await updateDoc(doc(db, 'wallets', sourceWallet.id), { balance: newWalletBal });
+      const savingRef = await addDoc(collection(db, 'savings'), newSavingData);
+      await addDoc(collection(db, 'transactions'), {
+        type: 'expense', amount: initialAmount,
+        category: `Tabungan · ${savingForm.name.trim()}`,
+        note: savingForm.note.trim() || `Setor tabungan ${savingForm.name.trim()} (Disimpan di ${storedInPlace})`,
+        walletId: sourceWallet.id, walletName: sourceWallet.name,
+        savingId: savingRef.id, isSavingAllocation: true, date: txDate, createdAt: Date.now()
+      });
+      await addDoc(collection(db, 'savings_logs'), {
+        savingId: savingRef.id, savingName: savingForm.name.trim(),
+        type: 'deposit', amount: initialAmount, walletId: sourceWallet.id, walletName: sourceWallet.name,
+        storedIn: storedInPlace, note: savingForm.note.trim() || `Setoran awal dari ${sourceWallet.name}`,
+        date: txDate, createdAt: Date.now()
+      });
+    }
+
+    setIsSavingModalOpen(false);
+    setSavingForm({ name: '', initialAmount: '', targetAmount: '', walletId: '', storedIn: 'Seabank', note: '', date: todayStr });
+    triggerSuccessPopup({
+      title: 'Tabungan Berhasil Dibuat!',
+      subtitle: `${newSavingData.name} (Disimpan di ${storedInPlace})`,
+      amount: initialAmount,
+      amountType: 'neutral',
+      details: [
+        { label: 'Tujuan Tabungan', value: newSavingData.name },
+        { label: 'Dipotong dari Kantung', value: sourceWallet.name },
+        { label: `Sisa Saldo ${sourceWallet.name}`, value: `Rp ${formatIDR(newWalletBal)}` },
+        { label: 'Disimpan Di', value: storedInPlace }
+      ]
+    });
+  };
+
+  const handleUpdateSaving = async (savingId, editForm) => {
+    const cleanData = {
+      name: editForm.name.trim(),
+      targetAmount: parseRawAmount(editForm.targetAmount) || 0,
+      storedIn: editForm.storedIn.trim() || 'Tabungan'
+    };
+    if (user.isLocal) {
+      setSavings(prev => prev.map(s => s.id === savingId ? { ...s, ...cleanData } : s));
+    } else {
+      await updateDoc(doc(db, 'savings', savingId), cleanData);
+    }
+    showToast("Data tabungan diperbarui!");
+  };
+
+  const handleSavingAction = async (e) => {
+    e.preventDefault();
+    if (!selectedSaving) return;
+    const amount = parseRawAmount(savingActionForm.amount);
+    if (amount <= 0) return showToast("Masukkan nominal yang valid!", "error");
+    const wallet = wallets.find(w => w.id === savingActionForm.walletId);
+    if (!wallet) return showToast("Pilih kantung dompet terlebih dahulu!", "error");
+    const actionDate = new Date((savingActionForm.date || todayStr) + 'T12:00:00').getTime();
+
+    if (savingActionType === 'deposit') {
+      if (wallet.balance < amount) return showToast(`Saldo kantung ${wallet.name} tidak mencukupi!`, "error");
+      const newWalletBal = wallet.balance - amount;
+      const newCollected = (Number(selectedSaving.collectedAmount) || 0) + amount;
+
+      if (user.isLocal) {
+        setWallets(prev => prev.map(w => w.id === wallet.id ? { ...w, balance: newWalletBal } : w));
+        setSavings(prev => prev.map(s => s.id === selectedSaving.id ? { ...s, collectedAmount: newCollected } : s));
+        setTransactions(prev => [{
+          id: 'tx-' + Date.now(), type: 'expense', amount,
+          category: `Tabungan · ${selectedSaving.name}`,
+          note: savingActionForm.note.trim() || `Tambah tabungan ${selectedSaving.name}`,
+          walletId: wallet.id, walletName: wallet.name,
+          savingId: selectedSaving.id, isSavingAllocation: true, date: actionDate, createdAt: Date.now()
+        }, ...prev]);
+        setSavingsLogs(prev => [{
+          id: 'sl-' + Date.now(), savingId: selectedSaving.id, savingName: selectedSaving.name,
+          type: 'deposit', amount, walletId: wallet.id, walletName: wallet.name,
+          note: savingActionForm.note.trim() || `Setoran dari ${wallet.name}`, date: actionDate, createdAt: Date.now()
+        }, ...prev]);
+      } else {
+        await updateDoc(doc(db, 'wallets', wallet.id), { balance: newWalletBal });
+        await updateDoc(doc(db, 'savings', selectedSaving.id), { collectedAmount: newCollected });
+        await addDoc(collection(db, 'transactions'), {
+          type: 'expense', amount,
+          category: `Tabungan · ${selectedSaving.name}`,
+          note: savingActionForm.note.trim() || `Tambah tabungan ${selectedSaving.name}`,
+          walletId: wallet.id, walletName: wallet.name,
+          savingId: selectedSaving.id, isSavingAllocation: true, date: actionDate, createdAt: Date.now()
+        });
+        await addDoc(collection(db, 'savings_logs'), {
+          savingId: selectedSaving.id, savingName: selectedSaving.name,
+          type: 'deposit', amount, walletId: wallet.id, walletName: wallet.name,
+          note: savingActionForm.note.trim() || `Setoran dari ${wallet.name}`, date: actionDate, createdAt: Date.now()
+        });
+      }
+
+      triggerSuccessPopup({
+        title: 'Setoran Tabungan Berhasil!',
+        subtitle: selectedSaving.name,
+        amount,
+        amountType: 'neutral',
+        details: [
+          { label: 'Dipotong dari Kantung', value: wallet.name },
+          { label: `Sisa Saldo ${wallet.name}`, value: `Rp ${formatIDR(newWalletBal)}` },
+          { label: 'Total Tabungan Sekarang', value: `Rp ${formatIDR(newCollected)}` }
+        ]
+      });
+    } else {
+      if ((Number(selectedSaving.collectedAmount) || 0) < amount) {
+        return showToast("Saldo tabungan tidak mencukupi!", "error");
+      }
+      const newWalletBal = wallet.balance + amount;
+      const newCollected = (Number(selectedSaving.collectedAmount) || 0) - amount;
+
+      if (user.isLocal) {
+        setWallets(prev => prev.map(w => w.id === wallet.id ? { ...w, balance: newWalletBal } : w));
+        setSavings(prev => prev.map(s => s.id === selectedSaving.id ? { ...s, collectedAmount: newCollected } : s));
+        setTransactions(prev => [{
+          id: 'tx-' + Date.now(), type: 'income', amount,
+          category: `Tarik Tabungan · ${selectedSaving.name}`,
+          note: savingActionForm.note.trim() || `Tarik tabungan ${selectedSaving.name} ke ${wallet.name}`,
+          walletId: wallet.id, walletName: wallet.name,
+          savingId: selectedSaving.id, isSavingAllocation: true, date: actionDate, createdAt: Date.now()
+        }, ...prev]);
+        setSavingsLogs(prev => [{
+          id: 'sl-' + Date.now(), savingId: selectedSaving.id, savingName: selectedSaving.name,
+          type: 'withdraw', amount, walletId: wallet.id, walletName: wallet.name,
+          note: savingActionForm.note.trim() || `Ditarik ke ${wallet.name}`, date: actionDate, createdAt: Date.now()
+        }, ...prev]);
+      } else {
+        await updateDoc(doc(db, 'wallets', wallet.id), { balance: newWalletBal });
+        await updateDoc(doc(db, 'savings', selectedSaving.id), { collectedAmount: newCollected });
+        await addDoc(collection(db, 'transactions'), {
+          type: 'income', amount,
+          category: `Tarik Tabungan · ${selectedSaving.name}`,
+          note: savingActionForm.note.trim() || `Tarik tabungan ${selectedSaving.name} ke ${wallet.name}`,
+          walletId: wallet.id, walletName: wallet.name,
+          savingId: selectedSaving.id, isSavingAllocation: true, date: actionDate, createdAt: Date.now()
+        });
+        await addDoc(collection(db, 'savings_logs'), {
+          savingId: selectedSaving.id, savingName: selectedSaving.name,
+          type: 'withdraw', amount, walletId: wallet.id, walletName: wallet.name,
+          note: savingActionForm.note.trim() || `Ditarik ke ${wallet.name}`, date: actionDate, createdAt: Date.now()
+        });
+      }
+
+      triggerSuccessPopup({
+        title: 'Tabungan Ditarik ke Kantung!',
+        subtitle: selectedSaving.name,
+        amount,
+        amountType: 'income',
+        details: [
+          { label: 'Masuk ke Kantung', value: wallet.name },
+          { label: `Saldo ${wallet.name} Sekarang`, value: `Rp ${formatIDR(newWalletBal)}` },
+          { label: 'Sisa Tabungan', value: `Rp ${formatIDR(newCollected)}` }
+        ]
+      });
+    }
+
+    setIsSavingActionModalOpen(false);
+    setSavingActionForm({ amount: '', walletId: '', note: '', date: todayStr });
+  };
+
+  const handleDeleteSaving = async (savingId, refundWalletId = '') => {
+    const targetSaving = savings.find(s => s.id === savingId);
+    const collectedAmt = Number(targetSaving?.collectedAmount) || 0;
+    const refundWallet = wallets.find(w => w.id === refundWalletId);
+
+    if (collectedAmt > 0 && refundWallet) {
+      const newWalletBal = (Number(refundWallet.balance) || 0) + collectedAmt;
+      if (user.isLocal) {
+        setWallets(prev => prev.map(w => w.id === refundWallet.id ? { ...w, balance: newWalletBal } : w));
+        setTransactions(prev => [{
+          id: 'tx-' + Date.now(), type: 'income', amount: collectedAmt,
+          category: 'Pencairan Tabungan', note: `Pencairan tabungan ${targetSaving.name}`,
+          walletId: refundWallet.id, walletName: refundWallet.name, date: Date.now(), createdAt: Date.now()
+        }, ...prev]);
+      } else {
+        await updateDoc(doc(db, 'wallets', refundWallet.id), { balance: newWalletBal });
+        await addDoc(collection(db, 'transactions'), {
+          type: 'income', amount: collectedAmt,
+          category: 'Pencairan Tabungan', note: `Pencairan tabungan ${targetSaving.name}`,
+          walletId: refundWallet.id, walletName: refundWallet.name, date: Date.now(), createdAt: Date.now()
+        });
+      }
+    }
+
+    if (user.isLocal) {
+      setSavings(prev => prev.filter(s => s.id !== savingId));
+    } else {
+      await deleteDoc(doc(db, 'savings', savingId));
+    }
+
+    setSelectedSavingId(null);
+    showToast("Tabungan dihapus.");
   };
 
   const handleAddCategory = async (e) => {
@@ -622,7 +1124,7 @@ export default function App() {
     setIsResetting(true);
     try {
       if (user.isLocal) {
-        setWallets([]); setBudgets([]); setTransactions([]); setBudgetLogs([]); setCustomCategories([]);
+        setWallets([]); setBudgets([]); setTransactions([]); setBudgetLogs([]); setSavings([]); setSavingsLogs([]); setCustomCategories([]);
         localStorage.clear();
       } else {
         await Promise.all([
@@ -630,10 +1132,13 @@ export default function App() {
           ...budgets.map(b => deleteDoc(doc(db, 'budgets', b.id))),
           ...transactions.map(t => deleteDoc(doc(db, 'transactions', t.id))),
           ...budgetLogs.map(l => deleteDoc(doc(db, 'budget_logs', l.id))),
+          ...savings.map(s => deleteDoc(doc(db, 'savings', s.id))),
+          ...savingsLogs.map(sl => deleteDoc(doc(db, 'savings_logs', sl.id))),
           ...customCategories.map(c => deleteDoc(doc(db, 'categories', c.id))),
         ]);
       }
       setSelectedBudgetId(null);
+      setSelectedSavingId(null);
       setIsConfirmResetOpen(false);
       setIsAdjustModalOpen(false);
       triggerSuccessPopup({ title: 'Data Berhasil Direset!', subtitle: 'Siap mulai dari 0', amount: null, details: [] });
@@ -659,7 +1164,6 @@ export default function App() {
     );
   }
 
-  // Tampilkan Login Page jika belum login
   if (!isLoggedIn) {
     return <LoginPage onLoginSuccess={() => setIsLoggedIn(true)} />;
   }
@@ -689,6 +1193,7 @@ export default function App() {
             totalWalletBalance={totalWalletBalance}
             wallets={wallets}
             budgets={budgets}
+            savings={savings}
             hideBalance={hideBalance}
             setHideBalance={setHideBalance}
             monthlyIncome={monthlyIncome}
@@ -713,8 +1218,10 @@ export default function App() {
         {activeTab === 'wallets' && (
           <WalletsPage
             wallets={wallets}
+            transactions={transactions}
             totalWalletBalance={totalWalletBalance}
             totalRemainingBudget={totalRemainingBudget}
+            totalSavingsBalance={totalSavingsBalance}
             hideBalance={hideBalance}
             onAddWallet={() => {
               setEditingWallet(null);
@@ -737,10 +1244,32 @@ export default function App() {
         {activeTab === 'budgets' && (
           <BudgetsPage
             budgets={budgets}
+            budgetLogs={budgetLogs}
             categories={categories}
             onSelectBudget={(id) => {
               setSelectedBudgetId(id);
               setIsBudgetActionModalOpen(false);
+            }}
+            onOpenNewBudget={() => {
+              if (wallets.length > 0 && !budgetForm.walletId) setBudgetForm(prev => ({ ...prev, walletId: wallets[0].id }));
+              setIsBudgetModalOpen(true);
+            }}
+          />
+        )}
+
+        {activeTab === 'savings' && (
+          <SavingsPage
+            savings={savings}
+            savingsLogs={savingsLogs}
+            totalSavingsBalance={totalSavingsBalance}
+            hideBalance={hideBalance}
+            onSelectSaving={(id) => {
+              setSelectedSavingId(id);
+              setIsSavingActionModalOpen(false);
+            }}
+            onOpenNewSaving={() => {
+              if (wallets.length > 0 && !savingForm.walletId) setSavingForm(prev => ({ ...prev, walletId: wallets[0].id }));
+              setIsSavingModalOpen(true);
             }}
           />
         )}
@@ -785,6 +1314,9 @@ export default function App() {
           } else if (activeTab === 'budgets') {
             if (wallets.length > 0 && !budgetForm.walletId) setBudgetForm(prev => ({ ...prev, walletId: wallets[0].id }));
             setIsBudgetModalOpen(true);
+          } else if (activeTab === 'savings') {
+            if (wallets.length > 0 && !savingForm.walletId) setSavingForm(prev => ({ ...prev, walletId: wallets[0].id }));
+            setIsSavingModalOpen(true);
           } else {
             setIsCategoryModalOpen(true);
           }
@@ -795,7 +1327,7 @@ export default function App() {
         isTxModalOpen={isTxModalOpen} setIsTxModalOpen={setIsTxModalOpen} txForm={txForm} setTxForm={setTxForm} handleAddTx={handleAddTx}
         isWalletModalOpen={isWalletModalOpen} setIsWalletModalOpen={setIsWalletModalOpen} editingWallet={editingWallet} walletForm={walletForm} setWalletForm={setWalletForm} handleSaveWallet={handleSaveWallet} handleDeleteWallet={handleDeleteWallet}
         isBudgetModalOpen={isBudgetModalOpen} setIsBudgetModalOpen={setIsBudgetModalOpen} budgetForm={budgetForm} setBudgetForm={setBudgetForm} handleAddBudget={handleAddBudget}
-        selectedBudget={selectedBudget} setSelectedBudgetId={setSelectedBudgetId} selectedBudgetLogs={selectedBudgetLogs} handleDeleteBudget={handleDeleteBudget} handleDeleteBudgetLog={handleDeleteBudgetLog}
+        selectedBudget={selectedBudget} setSelectedBudgetId={setSelectedBudgetId} selectedBudgetLogs={selectedBudgetLogs} handleUpdateBudget={handleUpdateBudget} handleUpdateBudgetLog={handleUpdateBudgetLog} handleDeleteBudget={handleDeleteBudget} handleDeleteBudgetLog={handleDeleteBudgetLog}
         isBudgetActionModalOpen={isBudgetActionModalOpen} setIsBudgetActionModalOpen={setIsBudgetActionModalOpen} budgetActionType={budgetActionType} setBudgetActionType={setBudgetActionType} budgetActionForm={budgetActionForm} setBudgetActionForm={setBudgetActionForm} handleBudgetAction={handleBudgetAction}
         isCategoryModalOpen={isCategoryModalOpen} setIsCategoryModalOpen={setIsCategoryModalOpen} categoryForm={categoryForm} setCategoryForm={setCategoryForm} handleAddCategory={handleAddCategory}
         isAdjustModalOpen={isAdjustModalOpen} setIsAdjustModalOpen={setIsAdjustModalOpen} setActiveTab={setActiveTab}
@@ -806,6 +1338,14 @@ export default function App() {
         selectedTx={selectedTx} isEditingTx={isEditingTx} setIsEditingTx={setIsEditingTx}
         editTxForm={editTxForm} setEditTxForm={setEditTxForm}
         handleUpdateTx={handleUpdateTx} handleDeleteTx={handleDeleteTx}
+        isSavingModalOpen={isSavingModalOpen} setIsSavingModalOpen={setIsSavingModalOpen}
+        savingForm={savingForm} setSavingForm={setSavingForm} handleAddSaving={handleAddSaving}
+        selectedSaving={selectedSaving} setSelectedSavingId={setSelectedSavingId} selectedSavingLogs={selectedSavingLogs}
+        handleUpdateSaving={handleUpdateSaving} handleDeleteSaving={handleDeleteSaving}
+        isSavingActionModalOpen={isSavingActionModalOpen} setIsSavingActionModalOpen={setIsSavingActionModalOpen}
+        savingActionType={savingActionType} setSavingActionType={setSavingActionType}
+        savingActionForm={savingActionForm} setSavingActionForm={setSavingActionForm}
+        handleSavingAction={handleSavingAction}
       />
     </div>
   );

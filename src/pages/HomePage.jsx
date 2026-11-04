@@ -1,13 +1,13 @@
 import React, { useState } from 'react';
 import {
   ChevronLeft, ChevronRight, Wallet, Eye, EyeOff,
-  HelpCircle, PieChart, TrendingUp, ArrowUpCircle, Plus
+  HelpCircle, PieChart, PiggyBank, TrendingUp, ArrowUpCircle, Plus
 } from 'lucide-react';
 import { formatIDR, getMonthYearStr } from '../utils/formatters';
 import CategoryBadge from '../components/CategoryBadge';
 
 export default function HomePage({
-  currentDate, changeMonth, totalWalletBalance, wallets, budgets,
+  currentDate, changeMonth, totalWalletBalance, wallets, budgets, savings = [],
   hideBalance, setHideBalance, monthlyIncome, monthlyExpense, monthlyNetFlow,
   currentMonthMainTxs, groupedTxs, categories, setActiveTab,
   onOpenNewWallet, onSelectBudget, onOpenTxDetail
@@ -17,7 +17,8 @@ export default function HomePage({
   return (
     <div className="px-5 pt-4 space-y-5">
       {/* Pemilih Bulan */}
-      <div className="flex items-center justify-end">
+      <div className="flex items-center justify-between">
+        <span className="text-xs font-bold text-slate-400">Ringkasan Cashflow & Kantong</span>
         <div className="flex items-center gap-2 bg-slate-50 px-2.5 py-1 rounded-full border border-slate-200/70 text-[#0F172A] font-bold text-xs">
           <button onClick={() => changeMonth(-1)} className="p-1 rounded-full hover:bg-white active:scale-90 transition-all text-slate-500">
             <ChevronLeft size={15} />
@@ -37,7 +38,7 @@ export default function HomePage({
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2 text-white/90 text-xs font-semibold">
             <Wallet size={15} />
-            <span>Total Saldo Semua Wallet</span>
+            <span>Total Saldo Riil Semua Kantong</span>
           </div>
           <button
             type="button"
@@ -56,7 +57,7 @@ export default function HomePage({
         </h2>
 
         <div className="mt-3 flex items-center justify-between text-[11px] text-white/90 font-medium">
-          <span>{wallets.length} dompet • ketuk untuk kelola</span>
+          <span>{wallets.length} kantong aktif • ketuk untuk detail per kantong</span>
           <span
             onClick={(e) => {
               e.stopPropagation();
@@ -73,35 +74,79 @@ export default function HomePage({
       {showBulananInfo && (
         <div className="bg-[#0F172A] text-white text-xs p-3.5 rounded-2xl leading-relaxed shadow-md animate-in fade-in">
           <p className="font-bold text-[#00C49A] mb-1">Apa itu Selisih Bulanan?</p>
-          Hasil dari <strong>Pemasukan (Rp {formatIDR(monthlyIncome)}) dikurangi Pengeluaran (Rp {formatIDR(monthlyExpense)})</strong> pada bulan {getMonthYearStr(currentDate)}. Sedangkan Total Saldo di kartu biru adalah gabungan uang riil di semua dompet Anda.
+          Hasil dari <strong>Pemasukan (Rp {formatIDR(monthlyIncome)}) dikurangi Pengeluaran (Rp {formatIDR(monthlyExpense)})</strong> pada bulan {getMonthYearStr(currentDate)}. Sedangkan Total Saldo di kartu biru adalah gabungan uang riil di semua kantong Anda.
         </div>
       )}
 
-      {/* Pintasan Menu Grid */}
-      <div className="grid grid-cols-2 gap-3">
+      {/* Baris Real Saldo Tiap Kantong (Agar tahu saldo per kantong secara langsung) */}
+      {wallets.length > 0 && (
+        <div className="space-y-2">
+          <div className="flex items-center justify-between px-1">
+            <span className="text-xs font-extrabold text-[#0F172A]">Saldo Riil per Kantong</span>
+            <button onClick={() => setActiveTab('wallets')} className="text-[11px] font-bold text-[#1D63DC]">
+              Lihat Tracking →
+            </button>
+          </div>
+          <div className="flex gap-2.5 overflow-x-auto pb-1">
+            {wallets.map((w) => (
+              <div
+                key={w.id}
+                onClick={() => setActiveTab('wallets')}
+                className="min-w-[138px] bg-slate-50/90 hover:bg-blue-50/50 border border-slate-200/70 rounded-2xl p-3 cursor-pointer shrink-0 transition-all"
+              >
+                <div className="flex items-center justify-between gap-1">
+                  <span className="text-[11px] font-extrabold text-slate-700 truncate">{w.name}</span>
+                  <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-white text-slate-400 border border-slate-100">
+                    {w.type || 'Bank'}
+                  </span>
+                </div>
+                <p className="text-sm font-extrabold text-[#1D63DC] mt-1.5 truncate">
+                  {hideBalance ? 'Rp •••••' : `Rp ${formatIDR(w.balance)}`}
+                </p>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Pintasan Menu Grid (Dompet, Anggaran, Tabungan) */}
+      <div className="grid grid-cols-3 gap-2.5">
         <button
           onClick={() => setActiveTab('wallets')}
-          className="flex items-center gap-3 p-3.5 rounded-[22px] bg-white border border-slate-100 shadow-[0_4px_15px_rgba(0,0,0,0.03)] hover:border-blue-200 text-left transition-all"
+          className="flex flex-col items-start gap-2 p-3 rounded-[20px] bg-white border border-slate-100 shadow-[0_4px_15px_rgba(0,0,0,0.03)] hover:border-blue-200 text-left transition-all"
         >
-          <div className="w-10 h-10 rounded-full bg-[#EFF6FF] text-[#1D63DC] flex items-center justify-center shrink-0">
-            <Wallet size={19} />
+          <div className="w-9 h-9 rounded-xl bg-[#EFF6FF] text-[#1D63DC] flex items-center justify-center shrink-0">
+            <Wallet size={18} />
           </div>
-          <div className="min-w-0">
-            <p className="font-extrabold text-xs text-[#0F172A]">Wallet</p>
-            <p className="text-[11px] text-slate-400 truncate">Cash, BCA, Seabank</p>
+          <div className="min-w-0 w-full">
+            <p className="font-extrabold text-xs text-[#0F172A]">Kantong</p>
+            <p className="text-[10px] text-slate-400 truncate">{wallets.length} Dompet</p>
           </div>
         </button>
 
         <button
           onClick={() => setActiveTab('budgets')}
-          className="flex items-center gap-3 p-3.5 rounded-[22px] bg-white border border-slate-100 shadow-[0_4px_15px_rgba(0,0,0,0.03)] hover:border-emerald-200 text-left transition-all"
+          className="flex flex-col items-start gap-2 p-3 rounded-[20px] bg-white border border-slate-100 shadow-[0_4px_15px_rgba(0,0,0,0.03)] hover:border-emerald-200 text-left transition-all"
         >
-          <div className="w-10 h-10 rounded-full bg-[#E6FAF5] text-[#00C49A] flex items-center justify-center shrink-0">
-            <PieChart size={19} />
+          <div className="w-9 h-9 rounded-xl bg-[#E6FAF5] text-[#00C49A] flex items-center justify-center shrink-0">
+            <PieChart size={18} />
           </div>
-          <div className="min-w-0">
+          <div className="min-w-0 w-full">
             <p className="font-extrabold text-xs text-[#0F172A]">Anggaran</p>
-            <p className="text-[11px] text-slate-400 truncate">{budgets.length} Pos Aktif</p>
+            <p className="text-[10px] text-slate-400 truncate">{budgets.length} Grup Aktif</p>
+          </div>
+        </button>
+
+        <button
+          onClick={() => setActiveTab('savings')}
+          className="flex flex-col items-start gap-2 p-3 rounded-[20px] bg-white border border-slate-100 shadow-[0_4px_15px_rgba(0,0,0,0.03)] hover:border-amber-200 text-left transition-all"
+        >
+          <div className="w-9 h-9 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center shrink-0">
+            <PiggyBank size={18} />
+          </div>
+          <div className="min-w-0 w-full">
+            <p className="font-extrabold text-xs text-[#0F172A]">Tabungan</p>
+            <p className="text-[10px] text-slate-400 truncate">{savings.length} Tujuan</p>
           </div>
         </button>
       </div>
@@ -181,11 +226,21 @@ export default function HomePage({
                       <CategoryBadge categoryName={tx.category} txType={tx.type} categories={categories} />
                       <div className="min-w-0">
                         <p className="font-extrabold text-[#0F172A] text-sm truncate">{tx.category}</p>
-                        <div className="flex items-center gap-1.5 text-xs text-slate-400 truncate mt-0.5">
-                          <span className="truncate">{tx.note || tx.walletName}</span>
+                        <div className="flex flex-wrap items-center gap-1.5 text-xs text-slate-400 mt-0.5">
+                          <span className="truncate max-w-[140px]">{tx.note || tx.walletName}</span>
+                          {tx.walletName && (
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 text-slate-600 shrink-0">
+                              <Wallet size={9} /> {tx.walletName}
+                            </span>
+                          )}
                           {tx.isBudgetAllocation && (
                             <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-[#EFF6FF] text-[#1D63DC] shrink-0">
-                              Rincian Budget
+                              Grup Budget
+                            </span>
+                          )}
+                          {tx.isSavingAllocation && (
+                            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-50 text-amber-700 shrink-0">
+                              Tabungan
                             </span>
                           )}
                         </div>
@@ -209,4 +264,3 @@ export default function HomePage({
     </div>
   );
 }
-
