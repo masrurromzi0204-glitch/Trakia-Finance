@@ -16,16 +16,10 @@ export default function BudgetsPage({ budgets, budgetLogs = [], categories, onSe
           const percent = allocated > 0 ? Math.min(100, Math.round((spent / allocated) * 100)) : 0;
           const pctColor = accentColors[idx % accentColors.length];
 
-          // Cari semua kantong unik yang terlibat pada anggaran ini dari budgetLogs
+          // Tampilkan dimana uang budget disimpan (hilangkan badge Multi-Dompet)
           const logsForBudget = budgetLogs.filter(l => l.budgetId === b.id);
-          const involvedWallets = Array.from(
-            new Set(
-              [
-                ...(b.storageForm ? [b.storageForm] : []),
-                ...logsForBudget.map(l => l.walletName).filter(Boolean)
-              ]
-            )
-          );
+          const fallbackWallet = logsForBudget.find(l => l.walletName && l.walletName !== 'Multi-Dompet')?.walletName || '';
+          const storedAt = (b.storageForm && b.storageForm !== 'Multi-Dompet') ? b.storageForm : fallbackWallet;
 
           return (
             <div
@@ -40,21 +34,18 @@ export default function BudgetsPage({ budgets, budgetLogs = [], categories, onSe
                     <h3 className="font-extrabold text-[#0F172A] text-sm truncate">{b.name}</h3>
                     <p className="text-xs text-slate-400 font-medium mt-0.5">
                       Terpakai: <strong className="text-rose-600">Rp{formatIDR(spent)}</strong>
-                      {allocated > 0 ? ` / Rp${formatIDR(allocated)}` : ' (Grup Fleksibel)'}
+                      {allocated > 0 ? ` / Rp${formatIDR(allocated)}` : ''}
                     </p>
                     <div className="flex flex-wrap items-center gap-1.5 mt-1.5">
                       <span className="text-[11px] text-[#00C49A] font-bold mr-1">
                         Sisa: Rp{formatIDR(remaining)}
                       </span>
-                      {involvedWallets.map((wName) => (
-                        <span
-                          key={wName}
-                          className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-[#EFF6FF] text-[#1D63DC] text-[10px] font-bold"
-                        >
+                      {storedAt && (
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-[#EFF6FF] text-[#1D63DC] text-[10px] font-bold">
                           <Wallet size={10} />
-                          {wName}
+                          {storedAt}
                         </span>
-                      ))}
+                      )}
                     </div>
                   </div>
                 </div>

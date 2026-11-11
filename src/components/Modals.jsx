@@ -36,6 +36,8 @@ export default function Modals({
   // State lokal untuk Edit & Konfirmasi Hapus Budget
   const [isEditingBudget, setIsEditingBudget] = useState(false);
   const [editBudgetForm, setEditBudgetForm] = useState({ name: '', categoryName: '', storageForm: '' });
+  const [isEditingStorage, setIsEditingStorage] = useState(false);
+  const [storageInputVal, setStorageInputVal] = useState('');
   const [confirmDeleteBudget, setConfirmDeleteBudget] = useState(false);
   const [deleteBudgetMode, setDeleteBudgetMode] = useState('refund'); // 'refund' | 'clean'
   const [refundWalletId, setRefundWalletId] = useState('');
@@ -864,17 +866,24 @@ export default function Modals({
 
               <div>
                 <label className="text-xs font-bold text-slate-500 block mb-1.5">
-                  Keterangan Kantong / Tempat Simpan Utama
+                  Di Mana Uang Budget Disimpan
                 </label>
+                <input
+                  type="text"
+                  value={budgetForm.storageForm}
+                  onChange={e => setBudgetForm({ ...budgetForm, storageForm: e.target.value })}
+                  className="w-full p-3 bg-slate-50 border border-slate-200 rounded-2xl text-xs font-bold outline-none focus:border-[#1D63DC] mb-2"
+                  placeholder="Contoh: Cash Dompet, BCA, Seabank..."
+                />
                 <div className="flex gap-1.5 overflow-x-auto pb-1">
-                  {Array.from(new Set(['Multi-Dompet', ...wallets.map(w => w.name), ...WALLET_PRESETS])).map((optionName) => {
+                  {Array.from(new Set([...wallets.map(w => w.name), ...WALLET_PRESETS])).map((optionName) => {
                     const isSelected = budgetForm.storageForm === optionName;
                     return (
                       <button
                         key={optionName}
                         type="button"
                         onClick={() => setBudgetForm({ ...budgetForm, storageForm: optionName })}
-                        className={`px-3.5 py-2 rounded-xl text-xs font-bold shrink-0 transition-all ${
+                        className={`px-3 py-1.5 rounded-xl text-xs font-bold shrink-0 transition-all ${
                           isSelected
                             ? 'bg-[#1D63DC] text-white shadow-sm'
                             : 'bg-slate-50 text-slate-600 border border-slate-200 hover:border-[#1D63DC]'
@@ -919,7 +928,7 @@ export default function Modals({
                 <CategoryBadge categoryName={selectedBudget.categoryName || selectedBudget.name} txType="expense" categories={categories} />
                 <div className="min-w-0">
                   <h2 className="text-lg font-extrabold text-[#0F172A] truncate">{selectedBudget.name}</h2>
-                  <p className="text-xs text-slate-400 font-medium">Multi-Dompet & Rincian Pengeluaran</p>
+                  <p className="text-xs text-slate-400 font-medium">Rincian Saldo & Riwayat Penggunaan</p>
                 </div>
               </div>
               <div className="flex items-center gap-1.5 shrink-0">
@@ -927,10 +936,11 @@ export default function Modals({
                   onClick={() => {
                     setIsEditingBudget(!isEditingBudget);
                     setConfirmDeleteBudget(false);
+                    const currentStored = selectedBudget.storageForm && selectedBudget.storageForm !== 'Multi-Dompet' ? selectedBudget.storageForm : '';
                     setEditBudgetForm({
                       name: selectedBudget.name || '',
-                      categoryName: selectedBudget.categoryName || 'Kebutuhan Dating',
-                      storageForm: selectedBudget.storageForm || 'Multi-Dompet'
+                      categoryName: selectedBudget.categoryName || '',
+                      storageForm: currentStored
                     });
                   }}
                   className="p-2 text-[#1D63DC] bg-[#EFF6FF] rounded-full hover:bg-blue-100"
@@ -954,6 +964,7 @@ export default function Modals({
                   onClick={() => {
                     setSelectedBudgetId(null);
                     setIsEditingBudget(false);
+                    setIsEditingStorage(false);
                     setConfirmDeleteBudget(false);
                   }}
                   className="p-2 text-slate-500 bg-slate-100 rounded-full hover:bg-slate-200"
@@ -1095,15 +1106,31 @@ export default function Modals({
                       </select>
                     </div>
                     <div>
-                      <label className="text-[11px] font-bold text-slate-600">Label Penyimpanan</label>
+                      <label className="text-[11px] font-bold text-slate-600">Di Mana Budget Disimpan</label>
                       <input
                         type="text"
                         value={editBudgetForm.storageForm}
                         onChange={e => setEditBudgetForm({ ...editBudgetForm, storageForm: e.target.value })}
-                        className="w-full mt-1 p-2.5 bg-white border border-slate-200 rounded-xl text-xs font-bold outline-none"
-                        placeholder="Multi-Dompet / BCA / Cash"
+                        className="w-full mt-1 p-2.5 bg-white border border-slate-200 rounded-xl text-xs font-bold outline-none focus:border-[#1D63DC]"
+                        placeholder="Contoh: Cash Dompet / BCA / Seabank"
                       />
                     </div>
+                  </div>
+                  <div className="flex gap-1.5 overflow-x-auto pb-1">
+                    {Array.from(new Set([...wallets.map(w => w.name), ...WALLET_PRESETS])).map(opt => (
+                      <button
+                        key={opt}
+                        type="button"
+                        onClick={() => setEditBudgetForm({ ...editBudgetForm, storageForm: opt })}
+                        className={`px-2.5 py-1 rounded-lg text-[11px] font-bold shrink-0 transition-all ${
+                          editBudgetForm.storageForm === opt
+                            ? 'bg-[#1D63DC] text-white'
+                            : 'bg-white text-slate-600 border border-slate-200'
+                        }`}
+                      >
+                        {opt}
+                      </button>
+                    ))}
                   </div>
                   <div className="flex gap-2 pt-1">
                     <button
@@ -1143,17 +1170,11 @@ export default function Modals({
                   const sp = Number(selectedBudget.spent) || 0;
                   const pct = alloc > 0 ? Math.min(100, Math.round((sp / alloc) * 100)) : 0;
                   return (
-                    <div className="space-y-1.5">
-                      <div className="w-full bg-slate-100 h-2.5 rounded-full overflow-hidden">
-                        <div
-                          className={`h-full rounded-full ${pct >= 90 ? 'bg-rose-500' : 'bg-[#1D63DC]'}`}
-                          style={{ width: `${alloc > 0 ? pct : 100}%` }}
-                        ></div>
-                      </div>
-                      <div className="flex justify-between text-xs font-bold">
-                        <span className="text-slate-500">Total Dana Masuk/Terpakai: Rp {formatIDR(alloc)}</span>
-                        {alloc > 0 && <span className="text-[#00C49A]">Terpakai: {pct}%</span>}
-                      </div>
+                    <div className="w-full bg-slate-100 h-2.5 rounded-full overflow-hidden">
+                      <div
+                        className={`h-full rounded-full ${pct >= 90 ? 'bg-rose-500' : 'bg-[#1D63DC]'}`}
+                        style={{ width: `${alloc > 0 ? pct : 100}%` }}
+                      ></div>
                     </div>
                   );
                 })()}
@@ -1198,50 +1219,97 @@ export default function Modals({
                 </div>
               </div>
 
-              {/* Card Breakdown Multiple Dompet di Satu Card Anggaran */}
+              {/* Card Keterangan Di Mana Budget Disimpan (Bisa Diedit Langsung) */}
               {(() => {
-                const walletSummary = {};
-                selectedBudgetLogs.forEach(log => {
-                  const wName = log.walletName || selectedBudget.storageForm || 'Saldo Anggaran';
-                  if (!walletSummary[wName]) walletSummary[wName] = { allocated: 0, directExpense: 0 };
-                  if (log.type === 'allocate') walletSummary[wName].allocated += Number(log.amount) || 0;
-                  if (log.type === 'expense') walletSummary[wName].directExpense += Number(log.amount) || 0;
-                });
-                const entries = Object.entries(walletSummary);
+                const fallbackW = selectedBudgetLogs.find(l => l.walletName && l.walletName !== 'Multi-Dompet')?.walletName || '';
+                const currentStorage = (selectedBudget.storageForm && selectedBudget.storageForm !== 'Multi-Dompet')
+                  ? selectedBudget.storageForm
+                  : (fallbackW || 'Belum ditentukan');
 
                 return (
-                  <div className="bg-[#EFF6FF]/70 rounded-[22px] p-4 border border-blue-100 space-y-2.5">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <Wallet size={16} className="text-[#1D63DC]" />
-                        <span className="text-xs font-extrabold text-[#0F172A]">
-                          Tracking Kantong Dompet di Grup Ini
-                        </span>
+                  <div className="bg-[#EFF6FF]/60 rounded-[22px] p-4 border border-blue-100 space-y-3">
+                    <div className="flex items-center justify-between gap-3">
+                      <div className="flex items-center gap-3 min-w-0">
+                        <div className="w-10 h-10 rounded-2xl bg-white text-[#1D63DC] flex items-center justify-center shrink-0 shadow-sm border border-blue-100">
+                          <Wallet size={18} />
+                        </div>
+                        <div className="min-w-0">
+                          <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400 block">
+                            KETERANGAN PENYIMPANAN SALDO
+                          </span>
+                          <p className="text-xs font-bold text-slate-600 mt-0.5">
+                            Saldo anggaran ini disimpan di <strong className="text-[#1D63DC]">{currentStorage}</strong>
+                          </p>
+                        </div>
                       </div>
-                      <span className="px-2.5 py-0.5 rounded-full bg-[#1D63DC] text-white text-[10px] font-extrabold">
-                        {entries.length || 1} Kantong
-                      </span>
+
+                      <div className="flex items-center gap-1.5 shrink-0">
+                        <span className="px-3 py-1 rounded-full bg-[#1D63DC] text-white text-xs font-extrabold">
+                          {currentStorage}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setIsEditingStorage(!isEditingStorage);
+                            setStorageInputVal(currentStorage === 'Belum ditentukan' ? '' : currentStorage);
+                          }}
+                          className="p-2 rounded-xl bg-white hover:bg-blue-50 text-[#1D63DC] border border-blue-100 transition-colors"
+                          title="Edit tempat penyimpanan budget"
+                        >
+                          <Pencil size={14} />
+                        </button>
+                      </div>
                     </div>
 
-                    {entries.length === 0 ? (
-                      <p className="text-xs text-slate-500">
-                        Anda bisa mencatat pengeluaran dari berbagai kantong dompet berbeda (misal BCA, Cash, Gaji Magang) di dalam grup ini.
-                      </p>
-                    ) : (
-                      <div className="grid grid-cols-1 gap-1.5">
-                        {entries.map(([wName, info]) => (
-                          <div key={wName} className="bg-white/90 px-3 py-2 rounded-xl flex items-center justify-between text-xs border border-blue-100/60">
-                            <span className="font-extrabold text-slate-700 flex items-center gap-1.5">
-                              <span className="w-2 h-2 rounded-full bg-[#1D63DC]"></span>
-                              {wName}
-                            </span>
-                            <div className="flex items-center gap-3 text-[11px] font-bold">
-                              {info.allocated > 0 && <span className="text-[#1D63DC]">Alokasi: Rp{formatIDR(info.allocated)}</span>}
-                              {info.directExpense > 0 && <span className="text-rose-600">Keluar: Rp{formatIDR(info.directExpense)}</span>}
-                            </div>
-                          </div>
-                        ))}
-                      </div>
+                    {isEditingStorage && (
+                      <form
+                        onSubmit={(e) => {
+                          e.preventDefault();
+                          handleUpdateBudget(selectedBudget.id, {
+                            name: selectedBudget.name,
+                            categoryName: selectedBudget.categoryName,
+                            storageForm: storageInputVal.trim() || currentStorage
+                          });
+                          setIsEditingStorage(false);
+                        }}
+                        className="pt-2 border-t border-blue-100/80 space-y-2.5 animate-in fade-in"
+                      >
+                        <label className="text-[11px] font-extrabold text-[#1D63DC] block">
+                          Ubah Tempat Penyimpanan Budget:
+                        </label>
+                        <div className="flex gap-2">
+                          <input
+                            type="text"
+                            required
+                            value={storageInputVal}
+                            onChange={e => setStorageInputVal(e.target.value)}
+                            className="flex-1 p-2.5 bg-white border border-blue-200 rounded-xl text-xs font-bold text-[#0F172A] outline-none focus:border-[#1D63DC]"
+                            placeholder="Contoh: Cash Dompet, BCA, Seabank..."
+                          />
+                          <button
+                            type="submit"
+                            className="px-4 py-2.5 bg-[#1D63DC] text-white rounded-xl text-xs font-extrabold shrink-0"
+                          >
+                            Simpan
+                          </button>
+                        </div>
+                        <div className="flex gap-1.5 overflow-x-auto pb-1">
+                          {Array.from(new Set([...wallets.map(w => w.name), ...WALLET_PRESETS])).map(opt => (
+                            <button
+                              key={opt}
+                              type="button"
+                              onClick={() => setStorageInputVal(opt)}
+                              className={`px-2.5 py-1 rounded-lg text-[11px] font-bold shrink-0 transition-all ${
+                                storageInputVal === opt
+                                  ? 'bg-[#1D63DC] text-white'
+                                  : 'bg-white text-slate-600 border border-slate-200 hover:border-[#1D63DC]'
+                              }`}
+                            >
+                              {opt}
+                            </button>
+                          ))}
+                        </div>
+                      </form>
                     )}
                   </div>
                 );

@@ -75,7 +75,7 @@ export default function App() {
     fromWalletId: '', toWalletId: '', amount: '', adminFee: '', note: '', date: todayStr
   });
   const [budgetForm, setBudgetForm] = useState({
-    name: '', initialAmount: '', walletId: '', storageForm: 'Multi-Dompet', categoryName: '', note: '', date: todayStr
+    name: '', initialAmount: '', walletId: '', storageForm: '', categoryName: '', note: '', date: todayStr
   });
   const [budgetActionForm, setBudgetActionForm] = useState({
     amount: '', walletId: '', sourceMode: 'direct_wallet', note: '', date: todayStr
@@ -704,7 +704,7 @@ export default function App() {
       if (sourceWallet.balance < initialAmount) return showToast(`Saldo di ${sourceWallet.name} tidak cukup!`, "error");
     }
 
-    const chosenStorage = budgetForm.storageForm || (sourceWallet ? sourceWallet.name : 'Multi-Dompet');
+    const chosenStorage = budgetForm.storageForm?.trim() || (sourceWallet ? sourceWallet.name : (wallets[0]?.name || 'Cash'));
     const newBudgetData = {
       name: budgetForm.name.trim(), categoryName: budgetForm.categoryName || budgetForm.name.trim(),
       storageForm: chosenStorage, allocated: initialAmount, spent: 0, remaining: initialAmount, createdAt: Date.now()
@@ -744,12 +744,12 @@ export default function App() {
     }
 
     setIsBudgetModalOpen(false);
-    setBudgetForm({ name: '', initialAmount: '', walletId: '', storageForm: 'Multi-Dompet', categoryName: '', note: '', date: todayStr });
+    setBudgetForm({ name: '', initialAmount: '', walletId: '', storageForm: '', categoryName: '', note: '', date: todayStr });
     triggerSuccessPopup({
-      title: 'Grup Anggaran Dibuat!', subtitle: newBudgetData.name, amount: initialAmount, amountType: 'neutral',
+      title: 'Anggaran Dibuat!', subtitle: newBudgetData.name, amount: initialAmount, amountType: 'neutral',
       details: [
-        { label: 'Nama Grup', value: newBudgetData.name },
-        { label: 'Mode Kantung', value: chosenStorage },
+        { label: 'Nama Anggaran', value: newBudgetData.name },
+        { label: 'Disimpan Di', value: chosenStorage },
         { label: 'Kategori', value: newBudgetData.categoryName }
       ]
     });
@@ -760,7 +760,7 @@ export default function App() {
     const cleanData = {
       name: updatedFields.name.trim(),
       categoryName: updatedFields.categoryName || updatedFields.name.trim(),
-      storageForm: updatedFields.storageForm || 'Multi-Dompet'
+      storageForm: updatedFields.storageForm?.trim() || ''
     };
     if (user.isLocal) {
       setBudgets(prev => prev.map(b => b.id === budgetId ? { ...b, ...cleanData } : b));
