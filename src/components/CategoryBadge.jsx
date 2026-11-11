@@ -1,12 +1,13 @@
 import React from 'react';
 import {
   Heart, Coffee, ShoppingBag, CreditCard, Utensils,
-  Car, Smartphone, Gift, Briefcase, Sparkles, Tag
+  Car, Smartphone, Gift, Briefcase, Sparkles, Tag, ArrowLeftRight
 } from 'lucide-react';
 
 export default function CategoryBadge({ categoryName, txType, categories = [] }) {
   const found = categories.find(c => c.name === categoryName);
   const iconName = found?.icon || (
+    txType === 'transfer' || categoryName?.includes('Pindah Saldo') ? 'ArrowLeftRight' :
     categoryName?.includes('Dating') ? 'Heart' :
     categoryName?.includes('Belanja') ? 'ShoppingBag' :
     categoryName?.includes('Tagihan') ? 'CreditCard' :
@@ -15,6 +16,7 @@ export default function CategoryBadge({ categoryName, txType, categories = [] })
   );
 
   const colorKey = found?.color || (
+    txType === 'transfer' || categoryName?.includes('Pindah Saldo') ? 'blue' :
     categoryName?.includes('Dating') ? 'purple' :
     categoryName?.includes('Belanja') ? 'blue' :
     categoryName?.includes('Tagihan') ? 'rose' :
@@ -46,6 +48,7 @@ export default function CategoryBadge({ categoryName, txType, categories = [] })
   else if (iconName === 'Gift') IconComponent = Gift;
   else if (iconName === 'Briefcase') IconComponent = Briefcase;
   else if (iconName === 'Sparkles') IconComponent = Sparkles;
+  else if (iconName === 'ArrowLeftRight') IconComponent = ArrowLeftRight;
 
   return (
     <div className={`w-11 h-11 rounded-2xl flex items-center justify-center shrink-0 ${badgeStyle}`}>

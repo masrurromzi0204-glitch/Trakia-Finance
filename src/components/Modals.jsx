@@ -1,15 +1,17 @@
 import React, { useState } from 'react';
 import { 
   X, Trash2, ArrowDownCircle, ArrowUpCircle, Wallet, 
-  CheckCircle2, ChevronRight, Pencil, AlertTriangle, PiggyBank, MapPin
+  CheckCircle2, ChevronRight, Pencil, AlertTriangle, PiggyBank, MapPin,
+  ArrowLeftRight, ArrowDownUp
 } from 'lucide-react';
-import { formatIDR, formatInputThousand, formatShortDate } from '../utils/formatters';
+import { formatIDR, formatInputThousand, formatShortDate, parseRawAmount } from '../utils/formatters';
 import { ICON_OPTIONS, COLOR_OPTIONS, WALLET_PRESETS } from '../utils/constants';
 import CategoryBadge from './CategoryBadge';
 
 export default function Modals({
   isTxModalOpen, setIsTxModalOpen, txForm, setTxForm, handleAddTx,
   isWalletModalOpen, setIsWalletModalOpen, editingWallet, walletForm, setWalletForm, handleSaveWallet, handleDeleteWallet,
+  isTransferModalOpen, setIsTransferModalOpen, transferForm, setTransferForm, handleTransferWallet, onOpenTransfer,
   isBudgetModalOpen, setIsBudgetModalOpen, budgetForm, setBudgetForm, handleAddBudget,
   selectedBudget, setSelectedBudgetId, selectedBudgetLogs, handleUpdateBudget, handleUpdateBudgetLog, handleDeleteBudget, handleDeleteBudgetLog,
   isBudgetActionModalOpen, setIsBudgetActionModalOpen, budgetActionType, setBudgetActionType, budgetActionForm, setBudgetActionForm, handleBudgetAction,
@@ -73,12 +75,22 @@ export default function Modals({
             {/* MODE VIEW */}
             {!isEditingTx && (
               <div className="space-y-4">
-                <div className={`rounded-2xl p-4 text-white text-center ${selectedTx.type === 'expense' ? 'bg-gradient-to-br from-rose-500 to-rose-600' : 'bg-gradient-to-br from-emerald-400 to-teal-500'}`}>
+                <div className={`rounded-2xl p-4 text-white text-center ${
+                  selectedTx.type === 'transfer'
+                    ? 'bg-gradient-to-br from-[#1D63DC] to-[#0EA5E9]'
+                    : selectedTx.type === 'expense'
+                      ? 'bg-gradient-to-br from-rose-500 to-rose-600'
+                      : 'bg-gradient-to-br from-emerald-400 to-teal-500'
+                }`}>
                   <p className="text-xs font-bold opacity-80 mb-1">
-                    {selectedTx.type === 'expense' ? 'PENGELUARAN' : 'PEMASUKAN'}
+                    {selectedTx.type === 'transfer'
+                      ? 'PEMINDAHAN SALDO ANTAR KANTONG'
+                      : selectedTx.type === 'expense'
+                        ? 'PENGELUARAN'
+                        : 'PEMASUKAN'}
                   </p>
                   <p className="text-3xl font-extrabold">
-                    {selectedTx.type === 'expense' ? '-' : '+'}Rp {formatIDR(selectedTx.amount)}
+                    {selectedTx.type === 'transfer' ? '↔ ' : selectedTx.type === 'expense' ? '-' : '+'}Rp {formatIDR(selectedTx.amount)}
                   </p>
                 </div>
 
@@ -87,10 +99,29 @@ export default function Modals({
                     <span className="text-xs font-bold text-slate-500">Kategori</span>
                     <span className="text-xs font-extrabold text-[#0F172A]">{selectedTx.category}</span>
                   </div>
-                  <div className="flex justify-between items-center px-4 py-3">
-                    <span className="text-xs font-bold text-slate-500">Kantung Dompet</span>
-                    <span className="text-xs font-extrabold text-[#1D63DC]">{selectedTx.walletName || '-'}</span>
-                  </div>
+                  {selectedTx.type === 'transfer' ? (
+                    <>
+                      <div className="flex justify-between items-center px-4 py-3">
+                        <span className="text-xs font-bold text-slate-500">Dari Kantung (Sumber)</span>
+                        <span className="text-xs font-extrabold text-rose-600">{selectedTx.fromWalletName || '-'}</span>
+                      </div>
+                      <div className="flex justify-between items-center px-4 py-3">
+                        <span className="text-xs font-bold text-slate-500">Ke Kantung (Tujuan)</span>
+                        <span className="text-xs font-extrabold text-[#00C49A]">{selectedTx.toWalletName || '-'}</span>
+                      </div>
+                      {Number(selectedTx.adminFee) > 0 && (
+                        <div className="flex justify-between items-center px-4 py-3">
+                          <span className="text-xs font-bold text-slate-500">Biaya Admin Transfer</span>
+                          <span className="text-xs font-extrabold text-rose-600">Rp {formatIDR(selectedTx.adminFee)}</span>
+                        </div>
+                      )}
+                    </>
+                  ) : (
+                    <div className="flex justify-between items-center px-4 py-3">
+                      <span className="text-xs font-bold text-slate-500">Kantung Dompet</span>
+                      <span className="text-xs font-extrabold text-[#1D63DC]">{selectedTx.walletName || '-'}</span>
+                    </div>
+                  )}
                   <div className="flex justify-between items-center px-4 py-3">
                     <span className="text-xs font-bold text-slate-500">Tanggal</span>
                     <span className="text-xs font-extrabold text-[#0F172A]">
@@ -109,7 +140,11 @@ export default function Modals({
                   <div className="bg-rose-50 border border-rose-200 rounded-2xl p-4 space-y-3">
                     <div className="flex items-center gap-2 text-rose-600">
                       <AlertTriangle size={16} />
-                      <p className="text-xs font-bold">Yakin hapus transaksi ini? Saldo kantung {selectedTx.walletName} akan dikembalikan.</p>
+                      <p className="text-xs font-bold">
+                        {selectedTx.type === 'transfer'
+                          ? `Yakin batalkan pemindahan saldo ini? Saldo kantung ${selectedTx.fromWalletName} dan ${selectedTx.toWalletName} akan dikembalikan.`
+                          : `Yakin hapus transaksi ini? Saldo kantung ${selectedTx.walletName} akan dikembalikan.`}
+                      </p>
                     </div>
                     <div className="flex gap-2">
                       <button
@@ -148,77 +183,155 @@ export default function Modals({
             {/* MODE EDIT */}
             {isEditingTx && (
               <form onSubmit={handleUpdateTx} className="space-y-4">
-                <div className="flex bg-slate-100 rounded-2xl p-1">
-                  <button type="button"
-                    onClick={() => { const firstExp = categories.find(c => c.type === 'expense')?.name || ''; setEditTxForm({ ...editTxForm, type: 'expense', category: firstExp }); }}
-                    className={`flex-1 py-2.5 text-xs font-extrabold rounded-xl transition-all ${editTxForm.type === 'expense' ? 'bg-white text-rose-600 shadow-sm' : 'text-slate-500'}`}
-                  >PENGELUARAN</button>
-                  <button type="button"
-                    onClick={() => { const firstInc = categories.find(c => c.type === 'income')?.name || ''; setEditTxForm({ ...editTxForm, category: firstInc, type: 'income' }); }}
-                    className={`flex-1 py-2.5 text-xs font-extrabold rounded-xl transition-all ${editTxForm.type === 'income' ? 'bg-white text-[#00C49A] shadow-sm' : 'text-slate-500'}`}
-                  >PEMASUKAN</button>
-                </div>
+                {editTxForm.type === 'transfer' ? (
+                  <>
+                    <div className="p-3 bg-[#EFF6FF] rounded-2xl flex items-center gap-2 text-xs font-extrabold text-[#1D63DC]">
+                      <ArrowLeftRight size={15} />
+                      <span>Edit Pemindahan Saldo Antar Kantong</span>
+                    </div>
 
-                <div>
-                  <label className="text-xs font-bold text-slate-500">Nominal (Rp)</label>
-                  <input type="text" inputMode="numeric" required
-                    value={editTxForm.amount}
-                    onChange={e => setEditTxForm({ ...editTxForm, amount: formatInputThousand(e.target.value) })}
-                    className="w-full mt-1 p-3.5 bg-slate-50 border border-slate-200 rounded-2xl text-xl font-extrabold outline-none focus:border-[#1D63DC]"
-                    placeholder="0"
-                  />
-                </div>
+                    <div>
+                      <label className="text-xs font-bold text-slate-500">Nominal Pindah Saldo (Rp)</label>
+                      <input type="text" inputMode="numeric" required
+                        value={editTxForm.amount}
+                        onChange={e => setEditTxForm({ ...editTxForm, amount: formatInputThousand(e.target.value) })}
+                        className="w-full mt-1 p-3.5 bg-slate-50 border border-slate-200 rounded-2xl text-xl font-extrabold outline-none focus:border-[#1D63DC]"
+                        placeholder="0"
+                      />
+                    </div>
 
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="text-xs font-bold text-slate-500">Pilih Kantung Dompet</label>
-                    <select required value={editTxForm.walletId}
-                      onChange={e => setEditTxForm({ ...editTxForm, walletId: e.target.value })}
-                      className="w-full mt-1 p-3 bg-slate-50 border border-slate-200 rounded-2xl text-xs font-bold outline-none focus:border-[#1D63DC]"
-                    >
-                      <option value="">Pilih Kantung...</option>
-                      {wallets.map(w => (
-                        <option key={w.id} value={w.id}>{w.name} (Rp {formatIDR(w.balance)})</option>
-                      ))}
-                    </select>
-                  </div>
-                  <div>
-                    <label className="text-xs font-bold text-slate-500">Tanggal</label>
-                    <input type="date" required value={editTxForm.date}
-                      onChange={e => setEditTxForm({ ...editTxForm, date: e.target.value })}
-                      className="w-full mt-1 p-3 bg-slate-50 border border-slate-200 rounded-2xl text-xs font-bold outline-none focus:border-[#1D63DC]"
-                    />
-                  </div>
-                </div>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className="text-xs font-bold text-slate-500">Dari Kantung (Sumber)</label>
+                        <select required value={editTxForm.fromWalletId || ''}
+                          onChange={e => setEditTxForm({ ...editTxForm, fromWalletId: e.target.value })}
+                          className="w-full mt-1 p-3 bg-slate-50 border border-slate-200 rounded-2xl text-xs font-bold outline-none focus:border-[#1D63DC]"
+                        >
+                          <option value="">Pilih Sumber...</option>
+                          {wallets.map(w => (
+                            <option key={w.id} value={w.id}>{w.name} (Rp {formatIDR(w.balance)})</option>
+                          ))}
+                        </select>
+                      </div>
+                      <div>
+                        <label className="text-xs font-bold text-slate-500">Ke Kantung (Tujuan)</label>
+                        <select required value={editTxForm.toWalletId || ''}
+                          onChange={e => setEditTxForm({ ...editTxForm, toWalletId: e.target.value })}
+                          className="w-full mt-1 p-3 bg-slate-50 border border-slate-200 rounded-2xl text-xs font-bold outline-none focus:border-[#1D63DC]"
+                        >
+                          <option value="">Pilih Tujuan...</option>
+                          {wallets.map(w => (
+                            <option key={w.id} value={w.id}>{w.name} (Rp {formatIDR(w.balance)})</option>
+                          ))}
+                        </select>
+                      </div>
+                    </div>
 
-                <div>
-                  <label className="text-xs font-bold text-slate-500">Kategori</label>
-                  <select required value={editTxForm.category}
-                    onChange={e => setEditTxForm({ ...editTxForm, category: e.target.value })}
-                    className="w-full mt-1 p-3 bg-slate-50 border border-slate-200 rounded-2xl text-xs font-bold outline-none focus:border-[#1D63DC]"
-                  >
-                    <option value="">Pilih Kategori...</option>
-                    {categories.filter(c => c.type === editTxForm.type).map(c => (
-                      <option key={c.id || c.name} value={c.name}>{c.name}</option>
-                    ))}
-                  </select>
-                </div>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className="text-xs font-bold text-slate-500">Biaya Admin (Opsional)</label>
+                        <input type="text" inputMode="numeric"
+                          value={editTxForm.adminFee || ''}
+                          onChange={e => setEditTxForm({ ...editTxForm, adminFee: formatInputThousand(e.target.value) })}
+                          className="w-full mt-1 p-3 bg-slate-50 border border-slate-200 rounded-2xl text-xs font-bold outline-none focus:border-[#1D63DC]"
+                          placeholder="0 (Gratis)"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-xs font-bold text-slate-500">Tanggal</label>
+                        <input type="date" required value={editTxForm.date}
+                          onChange={e => setEditTxForm({ ...editTxForm, date: e.target.value })}
+                          className="w-full mt-1 p-3 bg-slate-50 border border-slate-200 rounded-2xl text-xs font-bold outline-none focus:border-[#1D63DC]"
+                        />
+                      </div>
+                    </div>
 
-                <div>
-                  <label className="text-xs font-bold text-slate-500">Catatan / Keterangan</label>
-                  <input type="text" value={editTxForm.note}
-                    onChange={e => setEditTxForm({ ...editTxForm, note: e.target.value })}
-                    className="w-full mt-1 p-3 bg-slate-50 border border-slate-200 rounded-2xl text-sm font-medium outline-none focus:border-[#1D63DC]"
-                    placeholder="Contoh: Makan siang, Uang bensin..."
-                  />
-                </div>
+                    <div>
+                      <label className="text-xs font-bold text-slate-500">Catatan / Keterangan</label>
+                      <input type="text" value={editTxForm.note}
+                        onChange={e => setEditTxForm({ ...editTxForm, note: e.target.value })}
+                        className="w-full mt-1 p-3 bg-slate-50 border border-slate-200 rounded-2xl text-sm font-medium outline-none focus:border-[#1D63DC]"
+                        placeholder="Contoh: Pindah uang magang ke cash..."
+                      />
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <div className="flex bg-slate-100 rounded-2xl p-1">
+                      <button type="button"
+                        onClick={() => { const firstExp = categories.find(c => c.type === 'expense')?.name || ''; setEditTxForm({ ...editTxForm, type: 'expense', category: firstExp }); }}
+                        className={`flex-1 py-2.5 text-xs font-extrabold rounded-xl transition-all ${editTxForm.type === 'expense' ? 'bg-white text-rose-600 shadow-sm' : 'text-slate-500'}`}
+                      >PENGELUARAN</button>
+                      <button type="button"
+                        onClick={() => { const firstInc = categories.find(c => c.type === 'income')?.name || ''; setEditTxForm({ ...editTxForm, category: firstInc, type: 'income' }); }}
+                        className={`flex-1 py-2.5 text-xs font-extrabold rounded-xl transition-all ${editTxForm.type === 'income' ? 'bg-white text-[#00C49A] shadow-sm' : 'text-slate-500'}`}
+                      >PEMASUKAN</button>
+                    </div>
+
+                    <div>
+                      <label className="text-xs font-bold text-slate-500">Nominal (Rp)</label>
+                      <input type="text" inputMode="numeric" required
+                        value={editTxForm.amount}
+                        onChange={e => setEditTxForm({ ...editTxForm, amount: formatInputThousand(e.target.value) })}
+                        className="w-full mt-1 p-3.5 bg-slate-50 border border-slate-200 rounded-2xl text-xl font-extrabold outline-none focus:border-[#1D63DC]"
+                        placeholder="0"
+                      />
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className="text-xs font-bold text-slate-500">Pilih Kantung Dompet</label>
+                        <select required value={editTxForm.walletId}
+                          onChange={e => setEditTxForm({ ...editTxForm, walletId: e.target.value })}
+                          className="w-full mt-1 p-3 bg-slate-50 border border-slate-200 rounded-2xl text-xs font-bold outline-none focus:border-[#1D63DC]"
+                        >
+                          <option value="">Pilih Kantung...</option>
+                          {wallets.map(w => (
+                            <option key={w.id} value={w.id}>{w.name} (Rp {formatIDR(w.balance)})</option>
+                          ))}
+                        </select>
+                      </div>
+                      <div>
+                        <label className="text-xs font-bold text-slate-500">Tanggal</label>
+                        <input type="date" required value={editTxForm.date}
+                          onChange={e => setEditTxForm({ ...editTxForm, date: e.target.value })}
+                          className="w-full mt-1 p-3 bg-slate-50 border border-slate-200 rounded-2xl text-xs font-bold outline-none focus:border-[#1D63DC]"
+                        />
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="text-xs font-bold text-slate-500">Kategori</label>
+                      <select required value={editTxForm.category}
+                        onChange={e => setEditTxForm({ ...editTxForm, category: e.target.value })}
+                        className="w-full mt-1 p-3 bg-slate-50 border border-slate-200 rounded-2xl text-xs font-bold outline-none focus:border-[#1D63DC]"
+                      >
+                        <option value="">Pilih Kategori...</option>
+                        {categories.filter(c => c.type === editTxForm.type).map(c => (
+                          <option key={c.id || c.name} value={c.name}>{c.name}</option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="text-xs font-bold text-slate-500">Catatan / Keterangan</label>
+                      <input type="text" value={editTxForm.note}
+                        onChange={e => setEditTxForm({ ...editTxForm, note: e.target.value })}
+                        className="w-full mt-1 p-3 bg-slate-50 border border-slate-200 rounded-2xl text-sm font-medium outline-none focus:border-[#1D63DC]"
+                        placeholder="Contoh: Makan siang, Uang bensin..."
+                      />
+                    </div>
+                  </>
+                )}
 
                 <div className="flex gap-3">
                   <button type="button" onClick={() => setIsEditingTx(false)}
                     className="flex-1 py-3.5 rounded-2xl text-slate-600 font-extrabold text-sm bg-slate-100 hover:bg-slate-200 transition-colors"
                   >Batal</button>
                   <button type="submit"
-                    className={`flex-1 py-3.5 rounded-2xl text-white font-extrabold text-sm shadow-md transition-transform active:scale-98 ${editTxForm.type === 'expense' ? 'bg-[#1D63DC]' : 'bg-[#00C49A]'}`}
+                    className={`flex-1 py-3.5 rounded-2xl text-white font-extrabold text-sm shadow-md transition-transform active:scale-98 ${
+                      editTxForm.type === 'income' ? 'bg-[#00C49A]' : 'bg-[#1D63DC]'
+                    }`}
                   >Simpan Perubahan</button>
                 </div>
               </form>
@@ -263,6 +376,18 @@ export default function Modals({
               >
                 PEMASUKAN
               </button>
+              {onOpenTransfer && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsTxModalOpen(false);
+                    onOpenTransfer(txForm.walletId || '');
+                  }}
+                  className="flex-1 py-2.5 text-xs font-extrabold rounded-xl transition-all text-[#1D63DC] hover:bg-white/70 flex items-center justify-center gap-1"
+                >
+                  <ArrowLeftRight size={12} /> PINDAH SALDO
+                </button>
+              )}
             </div>
 
             <form onSubmit={handleAddTx} className="space-y-4">
@@ -419,6 +544,231 @@ export default function Modals({
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* 2B. MODAL PEMINDAHAN SALDO ANTAR KANTONG DOMPET (TRANSFER) */}
+      {isTransferModalOpen && transferForm && (
+        <div className="absolute inset-0 bg-black/50 z-50 flex items-end justify-center animate-in fade-in">
+          <div className="bg-white w-full rounded-t-[30px] p-6 shadow-2xl max-h-[92vh] overflow-y-auto animate-in slide-in-from-bottom-10">
+            <div className="flex justify-between items-center mb-4">
+              <div>
+                <h2 className="text-lg font-extrabold text-[#0F172A] flex items-center gap-2">
+                  <ArrowLeftRight size={19} className="text-[#1D63DC]" />
+                  <span>Pindah Saldo Antar Kantong</span>
+                </h2>
+                <p className="text-xs text-slate-500">Saldo kedua kantung langsung ter-update secara real-time</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsTransferModalOpen(false)}
+                className="p-1.5 bg-slate-100 rounded-full text-slate-500"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            {wallets.length < 2 ? (
+              <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 text-center space-y-3">
+                <p className="text-xs font-bold text-amber-800">
+                  Minimal harus ada 2 kantong dompet aktif untuk memindahkan saldo.
+                </p>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsTransferModalOpen(false);
+                    setIsWalletModalOpen(true);
+                  }}
+                  className="px-4 py-2.5 bg-[#1D63DC] text-white rounded-xl text-xs font-extrabold"
+                >
+                  + Tambah Kantong Baru
+                </button>
+              </div>
+            ) : (
+              <form onSubmit={handleTransferWallet} className="space-y-4">
+                {(() => {
+                  const fromW = wallets.find(w => w.id === transferForm.fromWalletId);
+                  const toW = wallets.find(w => w.id === transferForm.toWalletId);
+                  const rawAmt = parseRawAmount(transferForm.amount);
+                  const rawFee = parseRawAmount(transferForm.adminFee);
+                  const afterFrom = fromW ? (Number(fromW.balance) || 0) - rawAmt - rawFee : 0;
+                  const afterTo = toW ? (Number(toW.balance) || 0) + rawAmt : 0;
+
+                  return (
+                    <>
+                      {/* Skema Kantong Asal -> Kantong Tujuan */}
+                      <div className="bg-slate-50 border border-slate-200/80 rounded-2xl p-3.5 space-y-2.5 relative">
+                        <div>
+                          <label className="text-[11px] font-extrabold text-rose-500 uppercase tracking-wider block">
+                            Dari Kantung (Sumber Dana)
+                          </label>
+                          <select
+                            required
+                            value={transferForm.fromWalletId}
+                            onChange={e => {
+                              const newFrom = e.target.value;
+                              let newTo = transferForm.toWalletId;
+                              if (newFrom === newTo) {
+                                const alt = wallets.find(w => w.id !== newFrom);
+                                newTo = alt ? alt.id : '';
+                              }
+                              setTransferForm({ ...transferForm, fromWalletId: newFrom, toWalletId: newTo });
+                            }}
+                            className="w-full mt-1 p-3 bg-white border border-slate-200 rounded-xl text-xs font-extrabold text-[#0F172A] outline-none focus:border-[#1D63DC]"
+                          >
+                            <option value="">Pilih Kantung Asal...</option>
+                            {wallets.map(w => (
+                              <option key={w.id} value={w.id}>
+                                {w.name} — Saldo: Rp {formatIDR(w.balance)}
+                              </option>
+                            ))}
+                          </select>
+                          {fromW && (
+                            <div className="flex justify-between items-center text-[11px] mt-1 px-1">
+                              <span className="text-slate-400 font-semibold">Saldo saat ini: Rp {formatIDR(fromW.balance)}</span>
+                              {rawAmt > 0 && (
+                                <span className={`font-extrabold ${afterFrom < 0 ? 'text-rose-600' : 'text-slate-600'}`}>
+                                  Sisa: Rp {formatIDR(Math.max(0, afterFrom))}
+                                </span>
+                              )}
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Tombol Tukar Posisi */}
+                        <div className="flex items-center justify-center -my-1">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setTransferForm({
+                                ...transferForm,
+                                fromWalletId: transferForm.toWalletId,
+                                toWalletId: transferForm.fromWalletId
+                              });
+                            }}
+                            className="px-3 py-1.5 rounded-full bg-[#EFF6FF] hover:bg-blue-100 text-[#1D63DC] border border-blue-200 text-[11px] font-extrabold flex items-center gap-1 shadow-sm active:scale-95 transition-all"
+                            title="Tukar Kantung Asal & Tujuan"
+                          >
+                            <ArrowDownUp size={13} /> Tukar Posisi
+                          </button>
+                        </div>
+
+                        <div>
+                          <label className="text-[11px] font-extrabold text-[#00C49A] uppercase tracking-wider block">
+                            Ke Kantung (Tujuan Penerima)
+                          </label>
+                          <select
+                            required
+                            value={transferForm.toWalletId}
+                            onChange={e => setTransferForm({ ...transferForm, toWalletId: e.target.value })}
+                            className="w-full mt-1 p-3 bg-white border border-slate-200 rounded-xl text-xs font-extrabold text-[#0F172A] outline-none focus:border-[#1D63DC]"
+                          >
+                            <option value="">Pilih Kantung Tujuan...</option>
+                            {wallets
+                              .filter(w => w.id !== transferForm.fromWalletId)
+                              .map(w => (
+                                <option key={w.id} value={w.id}>
+                                  {w.name} — Saldo: Rp {formatIDR(w.balance)}
+                                </option>
+                              ))}
+                          </select>
+                          {toW && (
+                            <div className="flex justify-between items-center text-[11px] mt-1 px-1">
+                              <span className="text-slate-400 font-semibold">Saldo saat ini: Rp {formatIDR(toW.balance)}</span>
+                              {rawAmt > 0 && (
+                                <span className="font-extrabold text-[#00C49A]">
+                                  Menjadi: Rp {formatIDR(afterTo)}
+                                </span>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Nominal Pindah Saldo */}
+                      <div>
+                        <div className="flex justify-between items-center">
+                          <label className="text-xs font-bold text-slate-500">Nominal Pindah Saldo (Rp)</label>
+                          {fromW && Number(fromW.balance) > 0 && (
+                            <div className="flex items-center gap-1">
+                              {[
+                                { label: '25%', pct: 0.25 },
+                                { label: '50%', pct: 0.5 },
+                                { label: 'Semua', pct: 1 }
+                              ].map(btn => (
+                                <button
+                                  key={btn.label}
+                                  type="button"
+                                  onClick={() => {
+                                    const val = Math.floor((Number(fromW.balance) || 0) * btn.pct);
+                                    setTransferForm({ ...transferForm, amount: formatInputThousand(String(val)) });
+                                  }}
+                                  className="px-2 py-0.5 rounded-lg bg-[#EFF6FF] hover:bg-blue-100 text-[#1D63DC] text-[10px] font-extrabold transition-colors"
+                                >
+                                  {btn.label}
+                                </button>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                        <input
+                          type="text"
+                          inputMode="numeric"
+                          required
+                          value={transferForm.amount}
+                          onChange={e => setTransferForm({ ...transferForm, amount: formatInputThousand(e.target.value) })}
+                          className="w-full mt-1 p-3.5 bg-slate-50 border border-slate-200 rounded-2xl text-xl font-extrabold outline-none focus:border-[#1D63DC]"
+                          placeholder="0"
+                        />
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-3">
+                        <div>
+                          <label className="text-xs font-bold text-slate-500">Biaya Admin (Opsional)</label>
+                          <input
+                            type="text"
+                            inputMode="numeric"
+                            value={transferForm.adminFee}
+                            onChange={e => setTransferForm({ ...transferForm, adminFee: formatInputThousand(e.target.value) })}
+                            className="w-full mt-1 p-3 bg-slate-50 border border-slate-200 rounded-2xl text-xs font-bold outline-none focus:border-[#1D63DC]"
+                            placeholder="0 (Gratis)"
+                          />
+                        </div>
+                        <div>
+                          <label className="text-xs font-bold text-slate-500">Tanggal</label>
+                          <input
+                            type="date"
+                            required
+                            value={transferForm.date}
+                            onChange={e => setTransferForm({ ...transferForm, date: e.target.value })}
+                            className="w-full mt-1 p-3 bg-slate-50 border border-slate-200 rounded-2xl text-xs font-bold outline-none focus:border-[#1D63DC]"
+                          />
+                        </div>
+                      </div>
+
+                      <div>
+                        <label className="text-xs font-bold text-slate-500">Catatan / Keterangan (Opsional)</label>
+                        <input
+                          type="text"
+                          value={transferForm.note}
+                          onChange={e => setTransferForm({ ...transferForm, note: e.target.value })}
+                          className="w-full mt-1 p-3 bg-slate-50 border border-slate-200 rounded-2xl text-xs font-medium outline-none focus:border-[#1D63DC]"
+                          placeholder="Contoh: Tarik tunai ke Cash, Pindah gaji magang ke Seabank..."
+                        />
+                      </div>
+
+                      <button
+                        type="submit"
+                        className="w-full py-4 rounded-2xl bg-gradient-to-r from-[#1D63DC] to-[#0EA5E9] text-white font-extrabold text-sm shadow-md shadow-blue-500/20 active:scale-98 transition-all flex items-center justify-center gap-2"
+                      >
+                        <ArrowLeftRight size={16} /> Pindahkan Saldo Sekarang
+                      </button>
+                    </>
+                  );
+                })()}
+              </form>
+            )}
           </div>
         </div>
       )}
@@ -1770,6 +2120,20 @@ export default function Modals({
               Pilih aksi cepat untuk mengelola kantong dompet, anggaran, tabungan, atau mereset data aplikasi.
             </p>
             <div className="space-y-2.5">
+              {onOpenTransfer && (
+                <button
+                  onClick={() => {
+                    setIsAdjustModalOpen(false);
+                    onOpenTransfer();
+                  }}
+                  className="w-full p-3.5 bg-[#EFF6FF] hover:bg-blue-100/70 rounded-2xl flex items-center justify-between text-xs font-extrabold text-[#1D63DC]"
+                >
+                  <span className="flex items-center gap-2">
+                    <ArrowLeftRight size={15} /> Pindahkan Saldo Antar Kantong
+                  </span>
+                  <ChevronRight size={16} className="text-[#1D63DC]" />
+                </button>
+              )}
               <button
                 onClick={() => {
                   setIsAdjustModalOpen(false);

@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import {
   ChevronLeft, ChevronRight, Wallet, Eye, EyeOff,
-  HelpCircle, PieChart, PiggyBank, BarChart3, TrendingUp, ArrowUpCircle, Plus
+  HelpCircle, PieChart, PiggyBank, BarChart3, TrendingUp, ArrowUpCircle, Plus, ArrowLeftRight
 } from 'lucide-react';
 import { formatIDR, getMonthYearStr } from '../utils/formatters';
 import CategoryBadge from '../components/CategoryBadge';
@@ -10,7 +10,7 @@ export default function HomePage({
   currentDate, changeMonth, totalWalletBalance, wallets, budgets, savings = [],
   hideBalance, setHideBalance, monthlyIncome, monthlyExpense, monthlyNetFlow,
   currentMonthMainTxs, groupedTxs, categories, setActiveTab,
-  onOpenNewWallet, onSelectBudget, onOpenTxDetail
+  onOpenNewWallet, onOpenTransfer, onSelectBudget, onOpenTxDetail
 }) {
   const [showBulananInfo, setShowBulananInfo] = useState(false);
 
@@ -83,9 +83,19 @@ export default function HomePage({
         <div className="space-y-2">
           <div className="flex items-center justify-between px-1">
             <span className="text-xs font-extrabold text-[#0F172A]">Saldo Real per Kantong</span>
-            <button onClick={() => setActiveTab('wallets')} className="text-[11px] font-bold text-[#1D63DC] hover:underline">
-              Lihat Tracking →
-            </button>
+            <div className="flex items-center gap-2">
+              {wallets.length >= 2 && onOpenTransfer && (
+                <button
+                  onClick={() => onOpenTransfer()}
+                  className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-[#EFF6FF] text-[#1D63DC] text-[11px] font-extrabold hover:bg-blue-100 transition-colors"
+                >
+                  <ArrowLeftRight size={11} /> Pindah Saldo
+                </button>
+              )}
+              <button onClick={() => setActiveTab('wallets')} className="text-[11px] font-bold text-[#1D63DC] hover:underline">
+                Lihat Tracking →
+              </button>
+            </div>
           </div>
           <div className="flex gap-2.5 overflow-x-auto pb-1">
             {wallets.map((w) => (
@@ -244,10 +254,16 @@ export default function HomePage({
                         <p className="font-extrabold text-[#0F172A] text-sm truncate">{tx.category}</p>
                         <div className="flex flex-wrap items-center gap-1.5 text-xs text-slate-400 mt-0.5">
                           <span className="truncate max-w-[140px]">{tx.note || tx.walletName}</span>
-                          {tx.walletName && (
-                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 text-slate-600 shrink-0">
-                              <Wallet size={9} /> {tx.walletName}
+                          {tx.type === 'transfer' ? (
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-[#EFF6FF] text-[#1D63DC] shrink-0">
+                              <ArrowLeftRight size={9} /> {tx.fromWalletName} → {tx.toWalletName}
                             </span>
+                          ) : (
+                            tx.walletName && (
+                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 text-slate-600 shrink-0">
+                                <Wallet size={9} /> {tx.walletName}
+                              </span>
+                            )
                           )}
                           {tx.isBudgetAllocation && (
                             <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-[#EFF6FF] text-[#1D63DC] shrink-0">
@@ -263,8 +279,10 @@ export default function HomePage({
                       </div>
                     </div>
                     <div className="flex items-center gap-1.5 shrink-0">
-                      <p className={`font-extrabold text-sm ${tx.type === 'expense' ? 'text-rose-600' : 'text-[#00C49A]'}`}>
-                        {tx.type === 'expense' ? '-' : '+'}Rp{formatIDR(tx.amount)}
+                      <p className={`font-extrabold text-sm ${
+                        tx.type === 'transfer' ? 'text-[#1D63DC]' : tx.type === 'expense' ? 'text-rose-600' : 'text-[#00C49A]'
+                      }`}>
+                        {tx.type === 'transfer' ? '↔ ' : tx.type === 'expense' ? '-' : '+'}Rp{formatIDR(tx.amount)}
                       </p>
                       <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#CBD5E1" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                         <polyline points="9 18 15 12 9 6"/>

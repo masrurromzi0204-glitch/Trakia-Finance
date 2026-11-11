@@ -46,6 +46,7 @@ export default function App() {
   const [isTxModalOpen, setIsTxModalOpen] = useState(false);
   const [isWalletModalOpen, setIsWalletModalOpen] = useState(false);
   const [editingWallet, setEditingWallet] = useState(null);
+  const [isTransferModalOpen, setIsTransferModalOpen] = useState(false);
   const [isBudgetModalOpen, setIsBudgetModalOpen] = useState(false);
   const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false);
   const [editingCategory, setEditingCategory] = useState(null);
@@ -70,6 +71,9 @@ export default function App() {
     type: 'expense', amount: '', category: '', note: '', walletId: '', date: todayStr
   });
   const [walletForm, setWalletForm] = useState({ name: '', balance: '', type: 'Bank' });
+  const [transferForm, setTransferForm] = useState({
+    fromWalletId: '', toWalletId: '', amount: '', adminFee: '', note: '', date: todayStr
+  });
   const [budgetForm, setBudgetForm] = useState({
     name: '', initialAmount: '', walletId: '', storageForm: 'Multi-Dompet', categoryName: '', note: '', date: todayStr
   });
@@ -261,7 +265,11 @@ export default function App() {
   }, [transactions, currentDate]);
 
   const monthlyIncome = useMemo(() => currentMonthMainTxs.filter(t => t.type === 'income').reduce((s, t) => s + (Number(t.amount) || 0), 0), [currentMonthMainTxs]);
-  const monthlyExpense = useMemo(() => currentMonthMainTxs.filter(t => t.type === 'expense').reduce((s, t) => s + (Number(t.amount) || 0), 0), [currentMonthMainTxs]);
+  const monthlyExpense = useMemo(() => currentMonthMainTxs.reduce((s, t) => {
+    if (t.type === 'expense') return s + (Number(t.amount) || 0);
+    if (t.type === 'transfer' && Number(t.adminFee) > 0) return s + (Number(t.adminFee) || 0);
+    return s;
+  }, 0), [currentMonthMainTxs]);
   const monthlyNetFlow = monthlyIncome - monthlyExpense;
 
   const daysInSelectedMonth = useMemo(() => new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0).getDate(), [currentDate]);
@@ -270,6 +278,7 @@ export default function App() {
   const categorySummary = useMemo(() => {
     const map = {};
     currentMonthMainTxs.forEach(tx => {
+      if (tx.type !== 'income' && tx.type !== 'expense') return;
       const key = `${tx.type}_${tx.category}`;
       if (!map[key]) map[key] = { category: tx.category || 'Lainnya', type: tx.type, count: 0, total: 0 };
       map[key].count += 1;
@@ -289,7 +298,8 @@ export default function App() {
       const day = new Date(tx.date).getDate();
       const idx = day <= 7 ? 0 : day <= 14 ? 1 : day <= 21 ? 2 : 3;
       if (tx.type === 'income') weeks[idx].income += Number(tx.amount) || 0;
-      else weeks[idx].expense += Number(tx.amount) || 0;
+      else if (tx.type === 'expense') weeks[idx].expense += Number(tx.amount) || 0;
+      else if (tx.type === 'transfer' && Number(tx.adminFee) > 0) weeks[idx].expense += Number(tx.adminFee) || 0;
     });
     const maxVal = Math.max(...weeks.map(w => Math.max(w.income, w.expense)), 1);
     return { weeks, maxVal };
@@ -311,7 +321,8 @@ export default function App() {
       if (!groups[dayKey]) groups[dayKey] = { key: dayKey, prefix, shortDate, items: [], incomeTotal: 0, expenseTotal: 0 };
       groups[dayKey].items.push(tx);
       if (tx.type === 'income') groups[dayKey].incomeTotal += Number(tx.amount) || 0;
-      else groups[dayKey].expenseTotal += Number(tx.amount) || 0;
+      else if (tx.type === 'expense') groups[dayKey].expenseTotal += Number(tx.amount) || 0;
+      else if (tx.type === 'transfer' && Number(tx.adminFee) > 0) groups[dayKey].expenseTotal += Number(tx.adminFee) || 0;
     });
     return Object.values(groups);
   }, [currentMonthMainTxs]);
@@ -334,9 +345,12 @@ export default function App() {
     setEditTxForm({
       type: tx.type,
       amount: formatIDR(tx.amount),
+      adminFee: tx.adminFee ? formatIDR(tx.adminFee) : '',
       category: tx.category,
       note: tx.note || '',
       walletId: tx.walletId || '',
+      fromWalletId: tx.fromWalletId || tx.walletId || '',
+      toWalletId: tx.toWalletId || '',
       date: tx.date ? new Date(tx.date).toISOString().substring(0, 10) : todayStr,
     });
     setIsTxDetailOpen(true);
@@ -344,6 +358,36 @@ export default function App() {
 
   const handleDeleteTx = async (tx) => {
     if (!tx) return;
+    if (tx.type === 'transfer') {
+      const fromW = wallets.find(w => w.id === tx.fromWalletId) || wallets.find(w => w.name === tx.fromWalletName);
+      const toW = wallets.find(w => w.id === tx.toWalletId) || wallets.find(w => w.name === tx.toWalletName);
+      const amt = Number(tx.amount) || 0;
+      const fee = Number(tx.adminFee) || 0;
+
+      const walletUpdates = {};
+      if (fromW) walletUpdates[fromW.id] = (Number(fromW.balance) || 0) + amt + fee;
+      if (toW) {
+        const baseTo = walletUpdates[toW.id] !== undefined ? walletUpdates[toW.id] : (Number(toW.balance) || 0);
+        walletUpdates[toW.id] = Math.max(0, baseTo - amt);
+      }
+
+      if (user.isLocal) {
+        Object.entries(walletUpdates).forEach(([wId, bal]) => {
+          setWallets(prev => prev.map(w => w.id === wId ? { ...w, balance: bal } : w));
+        });
+        setTransactions(prev => prev.filter(t => t.id !== tx.id));
+      } else {
+        for (const [wId, bal] of Object.entries(walletUpdates)) {
+          await updateDoc(doc(db, 'wallets', wId), { balance: bal });
+        }
+        await deleteDoc(doc(db, 'transactions', tx.id));
+      }
+      setIsTxDetailOpen(false);
+      setSelectedTx(null);
+      showToast('Pemindahan saldo dibatalkan & saldo kedua kantung dikembalikan.');
+      return;
+    }
+
     const wallet = wallets.find(w => w.id === tx.walletId);
     if (wallet) {
       const revertedBalance = tx.type === 'expense'
@@ -370,6 +414,66 @@ export default function App() {
     if (!selectedTx) return;
     const newAmount = parseRawAmount(editTxForm.amount);
     if (newAmount <= 0) return showToast('Masukkan nominal yang valid!', 'error');
+
+    if (selectedTx.type === 'transfer' || editTxForm.type === 'transfer') {
+      const newFrom = wallets.find(w => w.id === editTxForm.fromWalletId);
+      const newTo = wallets.find(w => w.id === editTxForm.toWalletId);
+      if (!newFrom || !newTo) return showToast('Pilih kantung sumber dan tujuan!', 'error');
+      if (newFrom.id === newTo.id) return showToast('Kantung sumber dan tujuan tidak boleh sama!', 'error');
+
+      const newFee = parseRawAmount(editTxForm.adminFee);
+      const oldAmt = Number(selectedTx.amount) || 0;
+      const oldFee = Number(selectedTx.adminFee) || 0;
+      const oldFrom = wallets.find(w => w.id === selectedTx.fromWalletId) || wallets.find(w => w.name === selectedTx.fromWalletName);
+      const oldTo = wallets.find(w => w.id === selectedTx.toWalletId) || wallets.find(w => w.name === selectedTx.toWalletName);
+
+      const walletUpdates = {};
+      const getBal = (w) => (walletUpdates[w.id] !== undefined ? walletUpdates[w.id] : (Number(w.balance) || 0));
+
+      if (oldFrom) walletUpdates[oldFrom.id] = getBal(oldFrom) + oldAmt + oldFee;
+      if (oldTo) walletUpdates[oldTo.id] = Math.max(0, getBal(oldTo) - oldAmt);
+
+      if (getBal(newFrom) < newAmount + newFee) {
+        return showToast(`Saldo ${newFrom.name} tidak mencukupi!`, 'error');
+      }
+
+      walletUpdates[newFrom.id] = getBal(newFrom) - newAmount - newFee;
+      walletUpdates[newTo.id] = getBal(newTo) + newAmount;
+
+      const newDate = new Date((editTxForm.date || todayStr) + 'T12:00:00').getTime();
+      const updatedTransferFields = {
+        type: 'transfer',
+        amount: newAmount,
+        adminFee: newFee,
+        category: 'Pindah Saldo Kantong',
+        note: editTxForm.note?.trim() || `Pindah saldo ${newFrom.name} ke ${newTo.name}`,
+        walletId: newFrom.id,
+        walletName: `${newFrom.name} → ${newTo.name}`,
+        fromWalletId: newFrom.id,
+        fromWalletName: newFrom.name,
+        toWalletId: newTo.id,
+        toWalletName: newTo.name,
+        date: newDate,
+      };
+
+      if (user.isLocal) {
+        Object.entries(walletUpdates).forEach(([wId, bal]) => {
+          setWallets(prev => prev.map(w => w.id === wId ? { ...w, balance: bal } : w));
+        });
+        setTransactions(prev => prev.map(t => t.id === selectedTx.id ? { ...t, ...updatedTransferFields } : t));
+      } else {
+        for (const [wId, bal] of Object.entries(walletUpdates)) {
+          await updateDoc(doc(db, 'wallets', wId), { balance: bal });
+        }
+        await updateDoc(doc(db, 'transactions', selectedTx.id), updatedTransferFields);
+      }
+
+      setIsTxDetailOpen(false);
+      setSelectedTx(null);
+      setIsEditingTx(false);
+      showToast('Data pemindahan saldo berhasil diperbarui!');
+      return;
+    }
 
     const oldWallet = wallets.find(w => w.id === selectedTx.walletId);
     const newWallet = wallets.find(w => w.id === editTxForm.walletId);
@@ -420,6 +524,94 @@ export default function App() {
     setSelectedTx(null);
     setIsEditingTx(false);
     showToast('Transaksi berhasil diperbarui!');
+  };
+
+  const openTransferModal = (defaultFromWalletId = '') => {
+    const firstId = defaultFromWalletId || (wallets[0]?.id || '');
+    const secondWallet = wallets.find(w => w.id !== firstId) || wallets[1] || null;
+    setTransferForm({
+      fromWalletId: firstId,
+      toWalletId: secondWallet ? secondWallet.id : '',
+      amount: '',
+      adminFee: '',
+      note: '',
+      date: todayStr
+    });
+    setIsTransferModalOpen(true);
+  };
+
+  const handleTransferWallet = async (e) => {
+    e.preventDefault();
+    const amount = parseRawAmount(transferForm.amount);
+    const adminFee = parseRawAmount(transferForm.adminFee);
+    if (amount <= 0) return showToast('Masukkan nominal pindah saldo yang valid!', 'error');
+
+    const fromWallet = wallets.find(w => w.id === transferForm.fromWalletId);
+    const toWallet = wallets.find(w => w.id === transferForm.toWalletId);
+    if (!fromWallet || !toWallet) return showToast('Pilih kantung sumber dan kantung tujuan!', 'error');
+    if (fromWallet.id === toWallet.id) return showToast('Kantung sumber dan tujuan tidak boleh sama!', 'error');
+
+    const totalDeducted = amount + adminFee;
+    if ((Number(fromWallet.balance) || 0) < totalDeducted) {
+      return showToast(`Saldo di ${fromWallet.name} tidak mencukupi!`, 'error');
+    }
+
+    const newFromBalance = (Number(fromWallet.balance) || 0) - totalDeducted;
+    const newToBalance = (Number(toWallet.balance) || 0) + amount;
+    const selectedDateObj = new Date((transferForm.date || todayStr) + 'T12:00:00');
+
+    const newTransferTx = {
+      type: 'transfer',
+      amount,
+      adminFee,
+      category: 'Pindah Saldo Kantong',
+      note: transferForm.note.trim() || `Pindah saldo ${fromWallet.name} ke ${toWallet.name}`,
+      walletId: fromWallet.id,
+      walletName: `${fromWallet.name} → ${toWallet.name}`,
+      fromWalletId: fromWallet.id,
+      fromWalletName: fromWallet.name,
+      toWalletId: toWallet.id,
+      toWalletName: toWallet.name,
+      date: selectedDateObj.getTime(),
+      createdAt: Date.now()
+    };
+
+    if (user.isLocal) {
+      setWallets(prev => prev.map(w => {
+        if (w.id === fromWallet.id) return { ...w, balance: newFromBalance };
+        if (w.id === toWallet.id) return { ...w, balance: newToBalance };
+        return w;
+      }));
+      setTransactions(prev => [{ id: 'tx-' + Date.now(), ...newTransferTx }, ...prev]);
+    } else {
+      await updateDoc(doc(db, 'wallets', fromWallet.id), { balance: newFromBalance });
+      await updateDoc(doc(db, 'wallets', toWallet.id), { balance: newToBalance });
+      await addDoc(collection(db, 'transactions'), newTransferTx);
+    }
+
+    setCurrentDate(selectedDateObj);
+    setIsTransferModalOpen(false);
+    setTransferForm({ ...transferForm, amount: '', adminFee: '', note: '' });
+
+    const popupDetails = [
+      { label: `Sisa ${fromWallet.name}`, value: `Rp ${formatIDR(newFromBalance)}` },
+      { label: `Saldo ${toWallet.name}`, value: `Rp ${formatIDR(newToBalance)}` },
+    ];
+    if (adminFee > 0) {
+      popupDetails.push({ label: 'Biaya Admin', value: `Rp ${formatIDR(adminFee)}` });
+    }
+    popupDetails.push({
+      label: 'Total Saldo Real',
+      value: `Rp ${formatIDR(totalWalletBalance - adminFee)}`
+    });
+
+    triggerSuccessPopup({
+      title: 'Saldo Berhasil Dipindahkan!',
+      subtitle: `${fromWallet.name} → ${toWallet.name}`,
+      amount,
+      amountType: 'neutral',
+      details: popupDetails
+    });
   };
 
   // CRUD Handlers
@@ -1301,6 +1493,7 @@ export default function App() {
               setWalletForm({ name: '', balance: '', type: 'Bank' });
               setIsWalletModalOpen(true);
             }}
+            onOpenTransfer={openTransferModal}
             onSelectBudget={(bId) => {
               if (budgets.some(b => b.id === bId)) setSelectedBudgetId(bId);
             }}
@@ -1331,6 +1524,8 @@ export default function App() {
               setWalletForm({ name: w.name, balance: formattedBal, type: w.type || 'Bank' });
               setIsWalletModalOpen(true);
             }}
+            onOpenTransfer={openTransferModal}
+            onOpenTxDetail={openTxDetail}
           />
         )}
 
@@ -1436,6 +1631,7 @@ export default function App() {
       <Modals
         isTxModalOpen={isTxModalOpen} setIsTxModalOpen={setIsTxModalOpen} txForm={txForm} setTxForm={setTxForm} handleAddTx={handleAddTx}
         isWalletModalOpen={isWalletModalOpen} setIsWalletModalOpen={setIsWalletModalOpen} editingWallet={editingWallet} walletForm={walletForm} setWalletForm={setWalletForm} handleSaveWallet={handleSaveWallet} handleDeleteWallet={handleDeleteWallet}
+        isTransferModalOpen={isTransferModalOpen} setIsTransferModalOpen={setIsTransferModalOpen} transferForm={transferForm} setTransferForm={setTransferForm} handleTransferWallet={handleTransferWallet} onOpenTransfer={openTransferModal}
         isBudgetModalOpen={isBudgetModalOpen} setIsBudgetModalOpen={setIsBudgetModalOpen} budgetForm={budgetForm} setBudgetForm={setBudgetForm} handleAddBudget={handleAddBudget}
         selectedBudget={selectedBudget} setSelectedBudgetId={setSelectedBudgetId} selectedBudgetLogs={selectedBudgetLogs} handleUpdateBudget={handleUpdateBudget} handleUpdateBudgetLog={handleUpdateBudgetLog} handleDeleteBudget={handleDeleteBudget} handleDeleteBudgetLog={handleDeleteBudgetLog}
         isBudgetActionModalOpen={isBudgetActionModalOpen} setIsBudgetActionModalOpen={setIsBudgetActionModalOpen} budgetActionType={budgetActionType} setBudgetActionType={setBudgetActionType} budgetActionForm={budgetActionForm} setBudgetActionForm={setBudgetActionForm} handleBudgetAction={handleBudgetAction}

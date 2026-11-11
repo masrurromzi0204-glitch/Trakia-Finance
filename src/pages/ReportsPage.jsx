@@ -236,11 +236,12 @@ export default function ReportsPage({
             <h3 className="font-extrabold text-[#0F172A] text-sm">Tabel Semua Transaksi ({getMonthYearStr(currentDate)})</h3>
             <p className="text-[11px] text-slate-400">Daftar lengkap pemasukan & pengeluaran bulan ini</p>
           </div>
-          <div className="flex gap-1.5">
+          <div className="flex gap-1.5 flex-wrap">
             {[
               { id: 'all', label: 'Semua' },
               { id: 'income', label: 'Pemasukan' },
-              { id: 'expense', label: 'Pengeluaran' }
+              { id: 'expense', label: 'Pengeluaran' },
+              { id: 'transfer', label: 'Pindah Saldo' }
             ].map(tab => (
               <button
                 key={tab.id}
@@ -270,6 +271,7 @@ export default function ReportsPage({
               <tbody className="divide-y divide-slate-100 text-xs">
                 {filteredReportTxs.map((tx) => {
                   const d = new Date(tx.date);
+                  const isTransfer = tx.type === 'transfer';
                   return (
                     <tr key={tx.id} className="hover:bg-slate-50/70">
                       <td className="py-3 px-3 font-bold text-slate-500 whitespace-nowrap align-top">{formatShortDate(d)}</td>
@@ -277,11 +279,13 @@ export default function ReportsPage({
                         <p className="font-bold text-[#0F172A]">{tx.category}</p>
                         <p className="text-[11px] text-slate-500">{tx.note}</p>
                         <span className="inline-block mt-0.5 px-1.5 py-0.5 bg-[#EFF6FF] text-[#1D63DC] rounded text-[10px] font-semibold">
-                          {tx.walletName || 'Dompet'}
+                          {isTransfer ? `${tx.fromWalletName} → ${tx.toWalletName}` : (tx.walletName || 'Dompet')}
                         </span>
                       </td>
-                      <td className={`py-3 px-3 text-right font-extrabold whitespace-nowrap align-top ${tx.type === 'income' ? 'text-[#00C49A]' : 'text-rose-600'}`}>
-                        {tx.type === 'income' ? '+' : '-'}{formatIDR(tx.amount)}
+                      <td className={`py-3 px-3 text-right font-extrabold whitespace-nowrap align-top ${
+                        isTransfer ? 'text-[#1D63DC]' : tx.type === 'income' ? 'text-[#00C49A]' : 'text-rose-600'
+                      }`}>
+                        {isTransfer ? '↔ ' : tx.type === 'income' ? '+' : '-'}{formatIDR(tx.amount)}
                       </td>
                     </tr>
                   );
@@ -291,7 +295,10 @@ export default function ReportsPage({
                 <tr className="bg-slate-50/80 font-extrabold text-xs border-t border-slate-100">
                   <td colSpan={2} className="py-3 px-3 text-slate-700">Total Ditampilkan</td>
                   <td className="py-3 px-3 text-right text-[#0F172A]">
-                    Rp {formatIDR(filteredReportTxs.reduce((acc, tx) => acc + (tx.type === 'income' ? tx.amount : -tx.amount), 0))}
+                    Rp {formatIDR(filteredReportTxs.reduce((acc, tx) => {
+                      if (tx.type === 'transfer') return acc + (reportTableFilter === 'transfer' ? Number(tx.amount) || 0 : 0);
+                      return acc + (tx.type === 'income' ? Number(tx.amount) || 0 : -(Number(tx.amount) || 0));
+                    }, 0))}
                   </td>
                 </tr>
               </tfoot>

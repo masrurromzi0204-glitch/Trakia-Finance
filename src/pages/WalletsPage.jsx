@@ -1,11 +1,11 @@
 import React, { useState } from 'react';
-import { Plus, Wallet, ArrowUpCircle, ArrowDownCircle, Pencil, ChevronDown, ChevronUp, PiggyBank } from 'lucide-react';
+import { Plus, Wallet, ArrowUpCircle, ArrowDownCircle, Pencil, ChevronDown, ChevronUp, ArrowLeftRight } from 'lucide-react';
 import { formatIDR, formatInputThousand, formatShortDate } from '../utils/formatters';
 import { WALLET_PRESETS } from '../utils/constants';
 
 export default function WalletsPage({
   wallets, transactions = [], totalWalletBalance, totalRemainingBudget, totalSavingsBalance = 0, hideBalance,
-  onAddWallet, onEditWallet, onPresetWallet
+  onAddWallet, onEditWallet, onPresetWallet, onOpenTransfer, onOpenTxDetail
 }) {
   const [expandedWalletId, setExpandedWalletId] = useState(null);
 
@@ -22,19 +22,40 @@ export default function WalletsPage({
 
   return (
     <div className="px-5 pt-4 space-y-5 trakia-page-anim">
-      <div className="flex items-center justify-between">
-        <p className="text-xs text-slate-500">Saldo real & tracking pengeluaran tiap kantong ({wallets.length} kantong)</p>
-        <button
-          onClick={onAddWallet}
-          className="px-3.5 py-2 bg-[#1D63DC] hover:bg-blue-700 text-white rounded-full text-xs font-bold flex items-center gap-1.5 shadow-sm shadow-blue-500/20"
-        >
-          <Plus size={14} /> Tambah Kantong
-        </button>
+      <div className="flex items-center justify-between gap-2">
+        <p className="text-xs text-slate-500">Saldo real & mutasi tiap kantong ({wallets.length} kantong)</p>
+        <div className="flex items-center gap-1.5 shrink-0">
+          {onOpenTransfer && (
+            <button
+              onClick={() => onOpenTransfer()}
+              className="px-3 py-2 bg-[#EFF6FF] hover:bg-blue-100 text-[#1D63DC] border border-blue-200/70 rounded-full text-xs font-extrabold flex items-center gap-1.5 transition-all active:scale-95"
+            >
+              <ArrowLeftRight size={13} /> Pindah Saldo
+            </button>
+          )}
+          <button
+            onClick={onAddWallet}
+            className="px-3.5 py-2 bg-[#1D63DC] hover:bg-blue-700 text-white rounded-full text-xs font-bold flex items-center gap-1.5 shadow-sm shadow-blue-500/20 active:scale-95 transition-all"
+          >
+            <Plus size={14} /> Kantong
+          </button>
+        </div>
       </div>
 
       {/* Kartu Total Keseluruhan Saldo Dompet */}
       <div className="bg-gradient-to-br from-[#00C49A] via-[#0EA5E9] to-[#1D63DC] text-white rounded-[26px] p-5 shadow-[0_10px_25px_-5px_rgba(29,99,220,0.3)]">
-        <p className="text-xs text-white/90 font-semibold uppercase tracking-wider">Total Saldo Real Semua Kantong</p>
+        <div className="flex items-center justify-between gap-2">
+          <p className="text-xs text-white/90 font-semibold uppercase tracking-wider">Total Saldo Real Semua Kantong</p>
+          {wallets.length >= 2 && onOpenTransfer && (
+            <button
+              type="button"
+              onClick={() => onOpenTransfer()}
+              className="px-2.5 py-1 rounded-full bg-white/20 hover:bg-white/30 backdrop-blur-sm text-[11px] font-extrabold text-white flex items-center gap-1 transition-all"
+            >
+              <ArrowLeftRight size={11} /> Transfer Antar Kantong
+            </button>
+          )}
+        </div>
         <h3 className="text-3xl font-extrabold mt-1">
           {hideBalance ? 'Rp •••••••' : `Rp ${formatIDR(totalWalletBalance)}`}
         </h3>
@@ -70,13 +91,33 @@ export default function WalletsPage({
         </div>
       </div>
 
-      {/* Daftar Kantong Dompet + Tracking Pengeluaran per Kantong */}
+      {/* Daftar Kantong Dompet + Tracking Pengeluaran & Pindah Saldo per Kantong */}
       <div className="space-y-3">
         {wallets.map((w, index) => {
           const colorClass = badgeColors[index % badgeColors.length];
-          const walletTxs = transactions.filter(t => t.walletId === w.id || t.walletName === w.name);
-          const totalIn = walletTxs.filter(t => t.type === 'income').reduce((s, t) => s + (Number(t.amount) || 0), 0);
-          const totalOut = walletTxs.filter(t => t.type === 'expense').reduce((s, t) => s + (Number(t.amount) || 0), 0);
+          const walletTxs = transactions.filter(t => {
+            if (t.type === 'transfer') {
+              return t.fromWalletId === w.id || t.toWalletId === w.id || t.fromWalletName === w.name || t.toWalletName === w.name;
+            }
+            return t.walletId === w.id || t.walletName === w.name;
+          });
+
+          const totalIn = walletTxs.reduce((s, t) => {
+            if (t.type === 'income') return s + (Number(t.amount) || 0);
+            if (t.type === 'transfer' && (t.toWalletId === w.id || t.toWalletName === w.name)) {
+              return s + (Number(t.amount) || 0);
+            }
+            return s;
+          }, 0);
+
+          const totalOut = walletTxs.reduce((s, t) => {
+            if (t.type === 'expense') return s + (Number(t.amount) || 0);
+            if (t.type === 'transfer' && (t.fromWalletId === w.id || t.fromWalletName === w.name)) {
+              return s + (Number(t.amount) || 0) + (Number(t.adminFee) || 0);
+            }
+            return s;
+          }, 0);
+
           const isExpanded = expandedWalletId === w.id;
 
           return (
@@ -106,13 +147,26 @@ export default function WalletsPage({
                   </div>
                 </div>
 
-                <div className="flex items-center gap-2.5 shrink-0">
+                <div className="flex items-center gap-2 shrink-0">
                   <div className="text-right">
                     <span className="text-[10px] font-bold text-slate-400 block">Saldo Real</span>
                     <p className="font-extrabold text-sm text-[#0F172A]">
                       {hideBalance ? 'Rp ••••••' : `Rp${formatIDR(w.balance)}`}
                     </p>
                   </div>
+                  {wallets.length >= 2 && onOpenTransfer && (
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onOpenTransfer(w.id);
+                      }}
+                      className="p-2 rounded-xl bg-[#EFF6FF] hover:bg-blue-100 text-[#1D63DC] transition-colors"
+                      title={`Pindahkan saldo dari ${w.name}`}
+                    >
+                      <ArrowLeftRight size={14} />
+                    </button>
+                  )}
                   <button
                     type="button"
                     onClick={(e) => {
@@ -132,14 +186,25 @@ export default function WalletsPage({
               {isExpanded && (
                 <div className="px-4 pb-4 pt-2 bg-slate-50/60 border-t border-slate-100 space-y-2.5">
                   <div className="flex items-center justify-between text-[11px] font-bold text-slate-500">
-                    <span>Riwayat Pemakaian Kantong {w.name} ({walletTxs.length})</span>
-                    <button
-                      type="button"
-                      onClick={() => onEditWallet(w, formatInputThousand(w.balance))}
-                      className="text-[#1D63DC] hover:underline"
-                    >
-                      Ubah Saldo / Hapus
-                    </button>
+                    <span>Riwayat Mutasi Kantong {w.name} ({walletTxs.length})</span>
+                    <div className="flex items-center gap-3">
+                      {wallets.length >= 2 && onOpenTransfer && (
+                        <button
+                          type="button"
+                          onClick={() => onOpenTransfer(w.id)}
+                          className="text-[#1D63DC] hover:underline flex items-center gap-1"
+                        >
+                          <ArrowLeftRight size={11} /> Pindah Saldo
+                        </button>
+                      )}
+                      <button
+                        type="button"
+                        onClick={() => onEditWallet(w, formatInputThousand(w.balance))}
+                        className="text-slate-600 hover:text-[#1D63DC] hover:underline"
+                      >
+                        Ubah Saldo / Hapus
+                      </button>
+                    </div>
                   </div>
 
                   {walletTxs.length === 0 ? (
@@ -148,22 +213,40 @@ export default function WalletsPage({
                     <div className="bg-white rounded-2xl border border-slate-100 divide-y divide-slate-100 max-h-60 overflow-y-auto">
                       {walletTxs.slice(0, 20).map((tx) => {
                         const d = new Date(tx.date);
-                        const isExp = tx.type === 'expense';
+                        const isTransfer = tx.type === 'transfer';
+                        const isTransferOut = isTransfer && (tx.fromWalletId === w.id || tx.fromWalletName === w.name);
+                        const isExp = tx.type === 'expense' || isTransferOut;
+                        const txTotalAmt = isTransferOut
+                          ? (Number(tx.amount) || 0) + (Number(tx.adminFee) || 0)
+                          : (Number(tx.amount) || 0);
+
                         return (
-                          <div key={tx.id} className="px-3.5 py-2.5 flex items-center justify-between gap-2 text-xs">
+                          <div
+                            key={tx.id}
+                            onClick={() => onOpenTxDetail && onOpenTxDetail(tx)}
+                            className="px-3.5 py-2.5 flex items-center justify-between gap-2 text-xs cursor-pointer hover:bg-slate-50/70 transition-colors"
+                          >
                             <div className="flex items-center gap-2.5 min-w-0">
-                              {isExp ? (
+                              {isTransfer ? (
+                                <ArrowLeftRight size={15} className="text-[#1D63DC] shrink-0" />
+                              ) : isExp ? (
                                 <ArrowUpCircle size={15} className="text-rose-500 shrink-0" />
                               ) : (
                                 <ArrowDownCircle size={15} className="text-[#00C49A] shrink-0" />
                               )}
                               <div className="min-w-0">
-                                <p className="font-bold text-[#0F172A] truncate">{tx.note || tx.category}</p>
-                                <p className="text-[10px] text-slate-400">{formatShortDate(d)} • {tx.category}</p>
+                                <p className="font-bold text-[#0F172A] truncate">
+                                  {isTransfer
+                                    ? (isTransferOut ? `Pindah ke ${tx.toWalletName}` : `Terima dari ${tx.fromWalletName}`)
+                                    : (tx.note || tx.category)}
+                                </p>
+                                <p className="text-[10px] text-slate-400 truncate">
+                                  {formatShortDate(d)} • {isTransfer ? (tx.note || 'Transfer Antar Kantong') : tx.category}
+                                </p>
                               </div>
                             </div>
                             <span className={`font-extrabold shrink-0 ${isExp ? 'text-rose-600' : 'text-[#00C49A]'}`}>
-                              {isExp ? '-' : '+'}Rp{formatIDR(tx.amount)}
+                              {isExp ? '-' : '+'}Rp{formatIDR(txTotalAmt)}
                             </span>
                           </div>
                         );
