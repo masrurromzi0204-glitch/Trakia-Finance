@@ -17,8 +17,7 @@ export default function HomePage({
   return (
     <div className="px-5 pt-4 space-y-5 trakia-page-anim">
       {/* Pemilih Bulan */}
-      <div className="flex items-center justify-between">
-        <span className="text-xs font-bold text-slate-400">Ringkasan Cashflow & Kantong</span>
+      <div className="flex items-center justify-end">
         <div className="flex items-center gap-2 bg-slate-50 px-2.5 py-1 rounded-full border border-slate-200/70 text-[#0F172A] font-bold text-xs">
           <button onClick={() => changeMonth(-1)} className="p-1 rounded-full hover:bg-white active:scale-90 transition-all text-slate-500">
             <ChevronLeft size={15} />
@@ -81,21 +80,8 @@ export default function HomePage({
       {/* Baris Real Saldo Tiap Kantong */}
       {wallets.length > 0 && (
         <div className="space-y-2">
-          <div className="flex items-center justify-between px-1">
+          <div className="px-1">
             <span className="text-xs font-extrabold text-[#0F172A]">Saldo Real per Kantong</span>
-            <div className="flex items-center gap-2">
-              {wallets.length >= 2 && onOpenTransfer && (
-                <button
-                  onClick={() => onOpenTransfer()}
-                  className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-[#EFF6FF] text-[#1D63DC] text-[11px] font-extrabold hover:bg-blue-100 transition-colors"
-                >
-                  <ArrowLeftRight size={11} /> Pindah Saldo
-                </button>
-              )}
-              <button onClick={() => setActiveTab('wallets')} className="text-[11px] font-bold text-[#1D63DC] hover:underline">
-                Lihat Tracking →
-              </button>
-            </div>
           </div>
           <div className="flex gap-2.5 overflow-x-auto pb-1">
             {wallets.map((w) => (
@@ -104,13 +90,8 @@ export default function HomePage({
                 onClick={() => setActiveTab('wallets')}
                 className="min-w-[138px] bg-slate-50/90 hover:bg-blue-50/50 border border-slate-200/70 rounded-2xl p-3 cursor-pointer shrink-0 trakia-card-hover"
               >
-                <div className="flex items-center justify-between gap-1">
-                  <span className="text-[11px] font-extrabold text-slate-700 truncate">{w.name}</span>
-                  <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-white text-slate-400 border border-slate-100">
-                    {w.type || 'Bank'}
-                  </span>
-                </div>
-                <p className="text-sm font-extrabold text-[#1D63DC] mt-1.5 truncate">
+                <span className="text-[11px] font-extrabold text-slate-700 block truncate">{w.name}</span>
+                <p className="text-sm font-extrabold text-[#1D63DC] mt-1 truncate">
                   {hideBalance ? 'Rp •••••' : `Rp ${formatIDR(w.balance)}`}
                 </p>
               </div>

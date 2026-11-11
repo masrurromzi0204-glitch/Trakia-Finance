@@ -1,27 +1,13 @@
 import React from 'react';
-import { ChevronRight, Plus, Wallet } from 'lucide-react';
+import { ChevronRight, Wallet } from 'lucide-react';
 import { formatIDR } from '../utils/formatters';
 import CategoryBadge from '../components/CategoryBadge';
 
-export default function BudgetsPage({ budgets, budgetLogs = [], categories, onSelectBudget, onOpenNewBudget }) {
+export default function BudgetsPage({ budgets, budgetLogs = [], categories, onSelectBudget }) {
   const accentColors = ['text-[#1D63DC]', 'text-amber-500', 'text-[#00C49A]', 'text-purple-600', 'text-rose-500'];
 
   return (
     <div className="px-5 pt-4 space-y-5 trakia-page-anim">
-      <div className="flex items-start justify-between gap-3">
-        <p className="text-xs text-slate-500 leading-relaxed flex-1">
-          Kelola pos anggaran atau grup pengeluaran (bisa dari <strong>multiple kantong dompet</strong>). Ketuk kartu untuk melihat rincian per kantong, edit, atau catat keluar.
-        </p>
-        {onOpenNewBudget && (
-          <button
-            onClick={onOpenNewBudget}
-            className="px-3.5 py-2 bg-[#1D63DC] hover:bg-blue-700 text-white rounded-full text-xs font-bold flex items-center gap-1.5 shadow-sm shadow-blue-500/20 shrink-0"
-          >
-            <Plus size={14} /> Buat
-          </button>
-        )}
-      </div>
-
       <div className="space-y-3">
         {budgets.map((b, idx) => {
           const allocated = Number(b.allocated) || 0;

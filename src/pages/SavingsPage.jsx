@@ -5,18 +5,6 @@ import { formatIDR } from '../utils/formatters';
 export default function SavingsPage({ savings = [], savingsLogs = [], totalSavingsBalance = 0, hideBalance, onSelectSaving, onOpenNewSaving }) {
   return (
     <div className="px-5 pt-4 space-y-5 pb-4 trakia-page-anim">
-      <div className="flex items-center justify-between gap-3">
-        <p className="text-xs text-slate-500 leading-relaxed flex-1">
-          Sisihkan uang dari kantung dompetmu untuk tujuan tabungan. Saat menabung, saldo kantung sumber otomatis berkurang.
-        </p>
-        <button
-          onClick={onOpenNewSaving}
-          className="px-3.5 py-2 bg-amber-500 hover:bg-amber-600 text-white rounded-full text-xs font-bold flex items-center gap-1.5 shadow-sm shadow-amber-500/20 shrink-0"
-        >
-          <Plus size={14} /> Buat Tabungan
-        </button>
-      </div>
-
       {/* Kartu Total Tabungan Terkumpul */}
       <div className="bg-gradient-to-br from-amber-500 via-orange-500 to-[#1D63DC] text-white rounded-[26px] p-5 shadow-[0_10px_25px_-5px_rgba(245,158,11,0.3)]">
         <div className="flex items-center gap-2 text-white/90 text-xs font-semibold uppercase tracking-wider">
