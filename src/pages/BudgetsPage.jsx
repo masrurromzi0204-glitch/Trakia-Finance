@@ -1,5 +1,5 @@
 import React from 'react';
-import { ChevronRight, Wallet } from 'lucide-react';
+import { CaretRight, Wallet } from '@phosphor-icons/react';
 import { formatIDR } from '../utils/formatters';
 import CategoryBadge from '../components/CategoryBadge';
 
@@ -42,7 +42,7 @@ export default function BudgetsPage({ budgets, budgetLogs = [], categories, onSe
                       </span>
                       {storedAt && (
                         <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-[#EFF6FF] text-[#1D63DC] text-[10px] font-bold">
-                          <Wallet size={10} />
+                          <Wallet size={10} weight="fill" />
                           {storedAt}
                         </span>
                       )}
@@ -56,7 +56,7 @@ export default function BudgetsPage({ budgets, budgetLogs = [], categories, onSe
                       {percent}%
                     </span>
                   )}
-                  <ChevronRight size={16} className="text-slate-400" />
+                  <CaretRight size={15} weight="bold" className="text-slate-400" />
                 </div>
               </div>
             </div>

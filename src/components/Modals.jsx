@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
 import { 
   X, Trash2, ArrowDownCircle, ArrowUpCircle, Wallet, 
-  CheckCircle2, ChevronRight, Pencil, AlertTriangle, PiggyBank, MapPin,
+  CheckCircle2, ChevronRight, Pencil, AlertTriangle, MapPin,
   ArrowLeftRight, ArrowDownUp
 } from 'lucide-react';
+import { Vault } from '@phosphor-icons/react';
 import { formatIDR, formatInputThousand, formatShortDate, parseRawAmount } from '../utils/formatters';
 import { ICON_OPTIONS, COLOR_OPTIONS, WALLET_PRESETS } from '../utils/constants';
 import CategoryBadge from './CategoryBadge';
@@ -1693,8 +1694,8 @@ export default function Modals({
                       onClick={() => setSavingForm({ ...savingForm, storedIn: place })}
                       className={`px-3 py-1.5 rounded-xl text-[11px] font-bold shrink-0 transition-all ${
                         savingForm.storedIn === place
-                          ? 'bg-amber-500 text-white shadow-sm'
-                          : 'bg-slate-50 text-slate-600 border border-slate-200 hover:border-amber-400'
+                          ? 'bg-[#1D63DC] text-white shadow-sm'
+                          : 'bg-slate-50 text-slate-600 border border-slate-200 hover:border-[#1D63DC]'
                       }`}
                     >
                       {place}
@@ -1709,14 +1710,14 @@ export default function Modals({
                   type="text"
                   value={savingForm.note}
                   onChange={e => setSavingForm({ ...savingForm, note: e.target.value })}
-                  className="w-full mt-1 p-3 bg-slate-50 border border-slate-200 rounded-2xl text-xs font-medium outline-none focus:border-amber-500"
+                  className="w-full mt-1 p-3 bg-slate-50 border border-slate-200 rounded-2xl text-xs font-medium outline-none focus:border-[#1D63DC]"
                   placeholder="Contoh: Sisihkan dari gaji magang Oktober"
                 />
               </div>
 
               <button
                 type="submit"
-                className="w-full py-4 bg-gradient-to-r from-amber-500 to-orange-500 text-white rounded-2xl font-extrabold text-sm shadow-md shadow-amber-500/25"
+                className="w-full py-4 bg-gradient-to-r from-[#1D63DC] to-[#0EA5E9] text-white rounded-2xl font-extrabold text-sm shadow-md shadow-blue-500/25"
               >
                 Simpan & Potong Saldo Kantung
               </button>
@@ -1731,8 +1732,8 @@ export default function Modals({
           <div className="bg-white w-full h-[88vh] rounded-t-[32px] flex flex-col overflow-hidden shadow-2xl animate-in slide-in-from-bottom-10">
             <div className="bg-white px-6 pt-5 pb-4 border-b border-slate-100 flex justify-between items-center">
               <div className="flex items-center gap-3 min-w-0">
-                <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-amber-500 to-orange-500 text-white flex items-center justify-center shrink-0">
-                  <PiggyBank size={22} />
+                <div className="w-11 h-11 rounded-2xl bg-[#EFF6FF] text-[#1D63DC] flex items-center justify-center shrink-0">
+                  <Vault size={22} weight="fill" />
                 </div>
                 <div className="min-w-0">
                   <h2 className="text-lg font-extrabold text-[#0F172A] truncate">{selectedSaving.name}</h2>
@@ -1750,7 +1751,7 @@ export default function Modals({
                       storedIn: selectedSaving.storedIn || ''
                     });
                   }}
-                  className="p-2 text-amber-600 bg-amber-50 rounded-full hover:bg-amber-100"
+                  className="p-2 text-[#1D63DC] bg-[#EFF6FF] rounded-full hover:bg-blue-100"
                   title="Edit Tabungan"
                 >
                   <Pencil size={16} />

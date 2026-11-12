@@ -1,15 +1,15 @@
 import React from 'react';
-import { Home as HomeIcon, Wallet, PieChart, PiggyBank, Plus } from 'lucide-react';
+import { House, Wallet, ChartPieSlice, Vault, Plus } from '@phosphor-icons/react';
 
 export default function BottomNav({ activeTab, setActiveTab, onPlusClick }) {
   const leftItems = [
-    { id: 'home', icon: HomeIcon, label: 'Beranda', activeClass: 'bg-[#EFF6FF] text-[#1D63DC]', textClass: 'text-[#1D63DC]' },
+    { id: 'home', icon: House, label: 'Beranda', activeClass: 'bg-[#EFF6FF] text-[#1D63DC]', textClass: 'text-[#1D63DC]' },
     { id: 'wallets', icon: Wallet, label: 'Dompet', activeClass: 'bg-[#EFF6FF] text-[#1D63DC]', textClass: 'text-[#1D63DC]' }
   ];
 
   const rightItems = [
-    { id: 'budgets', icon: PieChart, label: 'Anggaran', activeClass: 'bg-[#E6FAF5] text-[#00C49A]', textClass: 'text-[#00C49A]' },
-    { id: 'savings', icon: PiggyBank, label: 'Tabungan', activeClass: 'bg-amber-50 text-amber-600', textClass: 'text-amber-600' }
+    { id: 'budgets', icon: ChartPieSlice, label: 'Anggaran', activeClass: 'bg-[#EFF6FF] text-[#1D63DC]', textClass: 'text-[#1D63DC]' },
+    { id: 'savings', icon: Vault, label: 'Tabungan', activeClass: 'bg-[#EFF6FF] text-[#1D63DC]', textClass: 'text-[#1D63DC]' }
   ];
 
   return (
@@ -28,7 +28,7 @@ export default function BottomNav({ activeTab, setActiveTab, onPlusClick }) {
             <div className={`px-3.5 py-1 rounded-2xl transition-all duration-200 ${
               isActive ? item.activeClass : 'text-slate-400 group-hover:text-slate-700'
             }`}>
-              <item.icon size={20} strokeWidth={isActive ? 2.5 : 2} />
+              <item.icon size={21} weight="fill" />
             </div>
             <span className={`text-[10px] mt-1 transition-colors ${
               isActive ? `font-extrabold ${item.textClass}` : 'font-semibold text-slate-400'
@@ -46,7 +46,7 @@ export default function BottomNav({ activeTab, setActiveTab, onPlusClick }) {
           className="w-14 h-14 rounded-full bg-gradient-to-tr from-[#1D63DC] to-[#3B82F6] hover:from-blue-700 hover:to-blue-500 text-white flex items-center justify-center shadow-[0_8px_20px_rgba(29,99,220,0.45)] ring-4 ring-white active:scale-90 transition-all"
           title="Tambah Data"
         >
-          <Plus size={28} strokeWidth={2.5} />
+          <Plus size={26} weight="bold" />
         </button>
       </div>
 
@@ -61,7 +61,7 @@ export default function BottomNav({ activeTab, setActiveTab, onPlusClick }) {
             <div className={`px-3.5 py-1 rounded-2xl transition-all duration-200 ${
               isActive ? item.activeClass : 'text-slate-400 group-hover:text-slate-700'
             }`}>
-              <item.icon size={20} strokeWidth={isActive ? 2.5 : 2} />
+              <item.icon size={21} weight="fill" />
             </div>
             <span className={`text-[10px] mt-1 transition-colors ${
               isActive ? `font-extrabold ${item.textClass}` : 'font-semibold text-slate-400'

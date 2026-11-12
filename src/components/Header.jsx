@@ -1,5 +1,5 @@
 import React from 'react';
-import { Eye, EyeOff, Pencil, Settings } from 'lucide-react';
+import { Eye, EyeSlash, PencilSimple, GearSix } from '@phosphor-icons/react';
 import { TrakiaCalculatorIcon } from './TrakiaLogo';
 
 export default function Header({ activeTab, setActiveTab, hideBalance, setHideBalance, onOpenAdjust }) {
@@ -29,14 +29,14 @@ export default function Header({ activeTab, setActiveTab, hideBalance, setHideBa
           className="p-2 rounded-full text-slate-400 hover:text-slate-700 hover:bg-slate-50 transition-colors"
           title={hideBalance ? "Tampilkan Saldo" : "Sembunyikan Saldo"}
         >
-          {hideBalance ? <EyeOff size={18} /> : <Eye size={18} />}
+          {hideBalance ? <EyeSlash size={19} weight="fill" /> : <Eye size={19} weight="fill" />}
         </button>
         <button
           onClick={onOpenAdjust}
           className="p-2 rounded-full text-slate-400 hover:text-slate-700 hover:bg-slate-50 transition-colors"
           title="Sesuaikan Pintasan"
         >
-          <Pencil size={17} />
+          <PencilSimple size={18} weight="fill" />
         </button>
         <button
           onClick={() => setActiveTab('settings')}
@@ -45,10 +45,9 @@ export default function Header({ activeTab, setActiveTab, hideBalance, setHideBa
           }`}
           title="Pengaturan & Kategori"
         >
-          <Settings size={18} />
+          <GearSix size={19} weight="fill" />
         </button>
       </div>
     </div>
   );
 }
-

@@ -1,30 +1,28 @@
-import React, { useState } from 'react';
+import React from 'react';
 import {
-  ChevronLeft, ChevronRight, Wallet, Eye, EyeOff,
-  HelpCircle, PieChart, PiggyBank, BarChart3, TrendingUp, ArrowUpCircle, Plus, ArrowLeftRight
-} from 'lucide-react';
+  CaretLeft, CaretRight, Wallet, Eye, EyeSlash,
+  ChartPieSlice, Vault, ChartBar, TrendUp, ArrowCircleUp, Plus, ArrowsLeftRight
+} from '@phosphor-icons/react';
 import { formatIDR, getMonthYearStr } from '../utils/formatters';
 import CategoryBadge from '../components/CategoryBadge';
 
 export default function HomePage({
   currentDate, changeMonth, totalWalletBalance, wallets, budgets, savings = [],
-  hideBalance, setHideBalance, monthlyIncome, monthlyExpense, monthlyNetFlow,
+  hideBalance, setHideBalance, monthlyIncome, monthlyExpense,
   currentMonthMainTxs, groupedTxs, categories, setActiveTab,
-  onOpenNewWallet, onOpenTransfer, onSelectBudget, onOpenTxDetail
+  onOpenNewWallet, onOpenTxDetail
 }) {
-  const [showBulananInfo, setShowBulananInfo] = useState(false);
-
   return (
     <div className="px-5 pt-4 space-y-5 trakia-page-anim">
       {/* Pemilih Bulan */}
       <div className="flex items-center justify-end">
         <div className="flex items-center gap-2 bg-slate-50 px-2.5 py-1 rounded-full border border-slate-200/70 text-[#0F172A] font-bold text-xs">
           <button onClick={() => changeMonth(-1)} className="p-1 rounded-full hover:bg-white active:scale-90 transition-all text-slate-500">
-            <ChevronLeft size={15} />
+            <CaretLeft size={14} weight="bold" />
           </button>
           <span className="min-w-[70px] text-center text-[#1D63DC]">{getMonthYearStr(currentDate)}</span>
           <button onClick={() => changeMonth(1)} className="p-1 rounded-full hover:bg-white active:scale-90 transition-all text-slate-500">
-            <ChevronRight size={15} />
+            <CaretRight size={14} weight="bold" />
           </button>
         </div>
       </div>
@@ -36,7 +34,7 @@ export default function HomePage({
       >
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2 text-white/90 text-xs font-semibold">
-            <Wallet size={15} />
+            <Wallet size={16} weight="fill" />
             <span>Total Saldo Real Semua Kantong</span>
           </div>
           <button
@@ -47,67 +45,23 @@ export default function HomePage({
             }}
             className="w-8 h-8 rounded-xl bg-black/15 hover:bg-black/25 flex items-center justify-center text-white/90 transition-colors"
           >
-            {hideBalance ? <EyeOff size={15} /> : <Eye size={15} />}
+            {hideBalance ? <EyeSlash size={16} weight="fill" /> : <Eye size={16} weight="fill" />}
           </button>
         </div>
 
         <h2 className="text-[32px] leading-tight font-extrabold tracking-tight mt-2">
           {hideBalance ? 'Rp •••••••' : `Rp ${formatIDR(totalWalletBalance)}`}
         </h2>
-
-        <div className="mt-3 flex items-center justify-between text-[11px] text-white/90 font-medium">
-          <span>{wallets.length} kantong aktif • ketuk untuk detail per kantong</span>
-          <span
-            onClick={(e) => {
-              e.stopPropagation();
-              setShowBulananInfo(!showBulananInfo);
-            }}
-            className="bg-white/20 backdrop-blur-sm px-2.5 py-0.5 rounded-full font-bold flex items-center gap-1"
-          >
-            Selisih: {hideBalance ? '••••' : `${monthlyNetFlow >= 0 ? '+' : ''}${formatIDR(monthlyNetFlow)}`}
-            <HelpCircle size={12} />
-          </span>
-        </div>
       </div>
 
-      {showBulananInfo && (
-        <div className="bg-[#0F172A] text-white text-xs p-3.5 rounded-2xl leading-relaxed shadow-md animate-in fade-in">
-          <p className="font-bold text-[#00C49A] mb-1">Apa itu Selisih Bulanan?</p>
-          Hasil dari <strong>Pemasukan (Rp {formatIDR(monthlyIncome)}) dikurangi Pengeluaran (Rp {formatIDR(monthlyExpense)})</strong> pada bulan {getMonthYearStr(currentDate)}. Sedangkan Total Saldo di kartu biru adalah gabungan uang real di semua kantong Anda.
-        </div>
-      )}
-
-      {/* Baris Real Saldo Tiap Kantong */}
-      {wallets.length > 0 && (
-        <div className="space-y-2">
-          <div className="px-1">
-            <span className="text-xs font-extrabold text-[#0F172A]">Saldo Real per Kantong</span>
-          </div>
-          <div className="flex gap-2.5 overflow-x-auto pb-1">
-            {wallets.map((w) => (
-              <div
-                key={w.id}
-                onClick={() => setActiveTab('wallets')}
-                className="min-w-[138px] bg-slate-50/90 hover:bg-blue-50/50 border border-slate-200/70 rounded-2xl p-3 cursor-pointer shrink-0 trakia-card-hover"
-              >
-                <span className="text-[11px] font-extrabold text-slate-700 block truncate">{w.name}</span>
-                <p className="text-sm font-extrabold text-[#1D63DC] mt-1 truncate">
-                  {hideBalance ? 'Rp •••••' : `Rp ${formatIDR(w.balance)}`}
-                </p>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Pintasan Menu Grid: Kantong, Anggaran, Tabungan + Card Analisis */}
+      {/* Pintasan Menu Grid: Kantong, Anggaran, Tabungan, Analisis (Warna Biru Seragam) */}
       <div className="grid grid-cols-2 gap-2.5">
         <button
           onClick={() => setActiveTab('wallets')}
           className="flex items-center gap-3 p-3.5 rounded-[22px] bg-white border border-slate-100 shadow-[0_4px_15px_rgba(0,0,0,0.03)] hover:border-blue-200 text-left trakia-card-hover"
         >
           <div className="w-10 h-10 rounded-2xl bg-[#EFF6FF] text-[#1D63DC] flex items-center justify-center shrink-0">
-            <Wallet size={19} />
+            <Wallet size={20} weight="fill" />
           </div>
           <div className="min-w-0">
             <p className="font-extrabold text-xs text-[#0F172A]">Kantong</p>
@@ -117,10 +71,10 @@ export default function HomePage({
 
         <button
           onClick={() => setActiveTab('budgets')}
-          className="flex items-center gap-3 p-3.5 rounded-[22px] bg-white border border-slate-100 shadow-[0_4px_15px_rgba(0,0,0,0.03)] hover:border-emerald-200 text-left trakia-card-hover"
+          className="flex items-center gap-3 p-3.5 rounded-[22px] bg-white border border-slate-100 shadow-[0_4px_15px_rgba(0,0,0,0.03)] hover:border-blue-200 text-left trakia-card-hover"
         >
-          <div className="w-10 h-10 rounded-2xl bg-[#E6FAF5] text-[#00C49A] flex items-center justify-center shrink-0">
-            <PieChart size={19} />
+          <div className="w-10 h-10 rounded-2xl bg-[#EFF6FF] text-[#1D63DC] flex items-center justify-center shrink-0">
+            <ChartPieSlice size={20} weight="fill" />
           </div>
           <div className="min-w-0">
             <p className="font-extrabold text-xs text-[#0F172A]">Anggaran</p>
@@ -130,10 +84,10 @@ export default function HomePage({
 
         <button
           onClick={() => setActiveTab('savings')}
-          className="flex items-center gap-3 p-3.5 rounded-[22px] bg-white border border-slate-100 shadow-[0_4px_15px_rgba(0,0,0,0.03)] hover:border-amber-200 text-left trakia-card-hover"
+          className="flex items-center gap-3 p-3.5 rounded-[22px] bg-white border border-slate-100 shadow-[0_4px_15px_rgba(0,0,0,0.03)] hover:border-blue-200 text-left trakia-card-hover"
         >
-          <div className="w-10 h-10 rounded-2xl bg-amber-50 text-amber-600 flex items-center justify-center shrink-0">
-            <PiggyBank size={19} />
+          <div className="w-10 h-10 rounded-2xl bg-[#EFF6FF] text-[#1D63DC] flex items-center justify-center shrink-0">
+            <Vault size={20} weight="fill" />
           </div>
           <div className="min-w-0">
             <p className="font-extrabold text-xs text-[#0F172A]">Tabungan</p>
@@ -143,17 +97,17 @@ export default function HomePage({
 
         <button
           onClick={() => setActiveTab('reports')}
-          className="flex items-center gap-3 p-3.5 rounded-[22px] bg-gradient-to-br from-[#EFF6FF] to-indigo-50/70 border border-blue-100 shadow-[0_4px_15px_rgba(29,99,220,0.06)] hover:border-[#1D63DC] text-left trakia-card-hover"
+          className="flex items-center gap-3 p-3.5 rounded-[22px] bg-white border border-slate-100 shadow-[0_4px_15px_rgba(0,0,0,0.03)] hover:border-blue-200 text-left trakia-card-hover"
         >
-          <div className="w-10 h-10 rounded-2xl bg-[#1D63DC] text-white flex items-center justify-center shrink-0 shadow-sm">
-            <BarChart3 size={19} />
+          <div className="w-10 h-10 rounded-2xl bg-[#EFF6FF] text-[#1D63DC] flex items-center justify-center shrink-0">
+            <ChartBar size={20} weight="fill" />
           </div>
           <div className="min-w-0 flex-1">
             <div className="flex items-center justify-between">
-              <p className="font-extrabold text-xs text-[#1D63DC]">Analisis</p>
-              <ChevronRight size={14} className="text-[#1D63DC]" />
+              <p className="font-extrabold text-xs text-[#0F172A]">Analisis</p>
+              <CaretRight size={13} weight="bold" className="text-[#1D63DC]" />
             </div>
-            <p className="text-[11px] text-slate-500 truncate">Grafik & Rekap</p>
+            <p className="text-[11px] text-slate-400 truncate">Grafik & Rekap</p>
           </div>
         </button>
       </div>
@@ -162,7 +116,7 @@ export default function HomePage({
       <div className="grid grid-cols-2 gap-3">
         <div className="rounded-[24px] p-4 text-white bg-gradient-to-br from-[#00C49A] to-[#0D9488] shadow-[0_6px_18px_rgba(0,196,154,0.25)]">
           <div className="flex items-center gap-1.5 text-white/90 text-xs font-bold">
-            <TrendingUp size={14} />
+            <TrendUp size={15} weight="fill" />
             <span>Pemasukan</span>
           </div>
           <p className="text-lg font-extrabold mt-2 truncate">
@@ -175,7 +129,7 @@ export default function HomePage({
 
         <div className="rounded-[24px] p-4 text-white bg-gradient-to-br from-[#FF5E62] to-[#E11D48] shadow-[0_6px_18px_rgba(244,63,94,0.25)]">
           <div className="flex items-center gap-1.5 text-white/90 text-xs font-bold">
-            <ArrowUpCircle size={14} />
+            <ArrowCircleUp size={15} weight="fill" />
             <span>Pengeluaran</span>
           </div>
           <p className="text-lg font-extrabold mt-2 truncate">
@@ -202,7 +156,7 @@ export default function HomePage({
                 onClick={onOpenNewWallet}
                 className="inline-flex items-center gap-2 px-4 py-2.5 bg-[#1D63DC] hover:bg-blue-700 text-white rounded-xl text-xs font-bold shadow-sm shadow-blue-500/20 transition-colors"
               >
-                <Plus size={15} /> Buat Kantong Dompet Pertama
+                <Plus size={15} weight="bold" /> Buat Kantong Dompet Pertama
               </button>
             ) : (
               <p className="text-xs text-slate-400">Tekan tombol biru <strong>+</strong> di tengah bawah untuk mencatat pemasukan atau pengeluaran.</p>
@@ -237,12 +191,12 @@ export default function HomePage({
                           <span className="truncate max-w-[140px]">{tx.note || tx.walletName}</span>
                           {tx.type === 'transfer' ? (
                             <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-[#EFF6FF] text-[#1D63DC] shrink-0">
-                              <ArrowLeftRight size={9} /> {tx.fromWalletName} → {tx.toWalletName}
+                              <ArrowsLeftRight size={10} weight="fill" /> {tx.fromWalletName} → {tx.toWalletName}
                             </span>
                           ) : (
                             tx.walletName && (
                               <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 text-slate-600 shrink-0">
-                                <Wallet size={9} /> {tx.walletName}
+                                <Wallet size={10} weight="fill" /> {tx.walletName}
                               </span>
                             )
                           )}
@@ -252,7 +206,7 @@ export default function HomePage({
                             </span>
                           )}
                           {tx.isSavingAllocation && (
-                            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-50 text-amber-700 shrink-0">
+                            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-[#EFF6FF] text-[#1D63DC] shrink-0">
                               Tabungan
                             </span>
                           )}
@@ -265,9 +219,7 @@ export default function HomePage({
                       }`}>
                         {tx.type === 'transfer' ? '↔ ' : tx.type === 'expense' ? '-' : '+'}Rp{formatIDR(tx.amount)}
                       </p>
-                      <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#CBD5E1" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                        <polyline points="9 18 15 12 9 6"/>
-                      </svg>
+                      <CaretRight size={14} weight="bold" className="text-slate-300" />
                     </div>
                   </div>
                 ))}
